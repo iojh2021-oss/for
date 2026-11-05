@@ -553,8 +553,11 @@ $('#lClear').onclick=()=>{LOG=[];try{localStorage.removeItem(LOGKEY)}catch{};$('
 setInterval(fuse,250);
 requestAnimationFrame(radar);
 syncBtns();
+window.__dh={running:()=>S.run,stop};
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 </script>
+<script src="pupil-core.js"></script>
+<script src="pupil.js"></script>
 </body>
 </html>

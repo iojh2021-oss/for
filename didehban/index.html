@@ -1,0 +1,2613 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Interactive 3D telecom city: from laptop to data center, with a radio-link lab. شبیه‌ساز تعاملی شبکه‌ی مخابرات.">
+  <title>شهر مخابراتی تهران · Mokhaberat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <style>
+/* Mokhaberat — styles. Logical properties are used so one stylesheet serves RTL (fa) and LTR (en). */
+:root {
+  --sky-top: #D5E2F1; --sky-bot: #F6EFE0;
+  --ink: #16223B; --ink-2: #4A5A78; --paper: #FBF8F1; --line: #D9D0BC;
+  --signal: #E8602C; --signal-ink: #B8420F; --fiber: #0F7C8A; --focus: #2B5FD9;
+  --lab-bg: #0D1829; --lab-panel: #152339; --lab-line: #28405F; --lab-txt: #DCE6F5; --lab-dim: #8FA4C4;
+  --amber: #F2B84B; --mint: #5FD3C9; --coral: #FF8A5C;
+  font-family: 'Vazirmatn', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; overflow: hidden; color: var(--ink); background: linear-gradient(180deg, var(--sky-top), var(--sky-bot)); font-size: 15px; line-height: 1.7; }
+body.lab-open #stage, body.lab-open #labels { visibility: hidden; }
+button { font: inherit; cursor: pointer; color: inherit; }
+button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+#stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.pin {
+  position: absolute; top: 0; left: 0; pointer-events: auto;
+  background: var(--paper); border: 1.5px solid var(--ink); border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 700; white-space: nowrap;
+  box-shadow: 0 2px 0 rgba(22,34,59,.85); transition: background .15s, color .15s;
+}
+.pin::after { content: ''; position: absolute; left: 50%; top: 100%; width: 2px; height: 8px; background: var(--ink); translate: -50% 0; }
+.pin.hot { background: #fff; border-color: var(--signal); }
+.pin.dim { opacity: .28; }
+.pin.sel { background: var(--signal); color: #fff; border-color: var(--signal-ink); }
+
+/* top bar */
+.bar { position: fixed; inset-block-start: 0; inset-inline: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 14px 18px; pointer-events: none; }
+.bar > * { pointer-events: auto; }
+.brand h1 { margin: 0; font-size: clamp(20px, 3.2vw, 30px); font-weight: 800; line-height: 1.2; letter-spacing: -0.01em; }
+.brand p { margin: 2px 0 0; color: var(--ink-2); font-size: 13px; max-width: 34ch; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.actions button, .panel .wide, .tracebar button {
+  border: 1.5px solid var(--ink); background: var(--paper); border-radius: 10px; padding: 6px 14px; font-weight: 700; min-height: 40px;
+}
+.actions button:hover { background: #fff; }
+.actions .primary { background: var(--ink); color: #fff; }
+.actions .primary[aria-pressed=true] { background: var(--signal); border-color: var(--signal-ink); }
+.actions .signal, .panel .signal { background: var(--signal); color: #fff; border-color: var(--signal-ink); }
+.actions .ghost { min-width: 40px; }
+.hint { position: fixed; inset-block-end: 70px; inset-inline-start: 18px; margin: 0; font-size: 12px; color: var(--ink-2); pointer-events: none; max-width: 36ch; }
+
+/* unit chips */
+.chips { position: fixed; inset-inline: 0; inset-block-end: 0; display: flex; gap: 8px; padding: 10px 18px calc(12px + env(safe-area-inset-bottom)); overflow-x: auto; scrollbar-width: thin; }
+.chip { flex: none; border: 1.5px solid var(--ink); background: var(--paper); border-radius: 999px; padding: 4px 14px; font-size: 13px; font-weight: 600; min-height: 36px; white-space: nowrap; }
+.chip:hover { background: #fff; }
+.chip[aria-pressed=true] { background: var(--ink); color: #fff; }
+
+/* packet tracer */
+.tracebar { position: fixed; inset-inline: 18px; inset-block-start: 74px; margin-inline: auto; max-width: 640px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; background: var(--ink); color: #fff; border-radius: 12px; padding: 10px 14px; box-shadow: 0 6px 24px rgba(22,34,59,.25); }
+.tracebar .ts { background: var(--signal); border-radius: 999px; padding: 0 10px; font-weight: 800; font-size: 12px; }
+.tracebar strong { font-weight: 800; }
+.tracebar #traceText { flex: 1 1 260px; color: #DCE6F5; font-size: 14px; }
+.tracebar button { background: transparent; color: #fff; border-color: rgba(255,255,255,.5); min-height: 32px; padding: 2px 12px; font-size: 13px; }
+
+/* detail panel */
+.panel { position: fixed; inset-block: 74px 62px; inset-inline-end: 16px; width: min(400px, calc(100vw - 32px)); overflow-y: auto; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 14px; padding: 18px 18px 22px; box-shadow: 0 10px 0 rgba(22,34,59,.12), 0 18px 40px rgba(22,34,59,.18); }
+.panel .x { position: absolute; inset-block-start: 10px; inset-inline-start: 10px; width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--ink); background: #fff; font-size: 20px; line-height: 1; }
+.panel .cat { margin: 0 0 2px; color: var(--signal-ink); font-weight: 700; font-size: 13px; padding-inline-start: 40px; }
+.panel h2 { margin: 0 0 12px; font-size: 20px; line-height: 1.4; font-weight: 800; }
+.panel h3 { margin: 18px 0 6px; font-size: 14px; font-weight: 800; color: var(--fiber); }
+.anim { margin: 0; border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; background: #F3EEE2; }
+.anim canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.anim figcaption { padding: 4px 10px 6px; font-size: 12px; color: var(--ink-2); border-top: 1px solid var(--line); }
+.desc { margin: 0; }
+dl { margin: 0; display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.5fr); gap: 0; font-size: 13.5px; }
+dt, dd { margin: 0; padding: 6px 0; border-top: 1px solid var(--line); }
+dt { font-weight: 700; padding-inline-end: 10px; }
+dd { text-align: start; }
+ul { margin: 0; padding-inline-start: 20px; font-size: 13.5px; }
+.fine { font-size: 12px; color: var(--ink-2); margin: 8px 0 0; }
+.panel .wide { width: 100%; margin-top: 14px; }
+
+.loading { position: fixed; inset: 0; display: grid; place-items: center; background: linear-gradient(180deg, var(--sky-top), var(--sky-bot)); font-weight: 700; font-size: 18px; padding: 24px; text-align: center; }
+.loading.err { color: #9B2C0F; }
+
+/* ---------- radio lab ---------- */
+.lab { position: fixed; inset: 0; z-index: 20; background: rgba(8, 14, 26, .86); display: grid; place-items: center; padding: 14px; }
+.lab-shell { width: min(1180px, 100%); max-height: 100%; overflow-y: auto; background: var(--lab-bg); color: var(--lab-txt); border: 1.5px solid var(--lab-line); border-radius: 16px; display: flex; flex-direction: column; }
+.lab-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px 20px 10px; border-bottom: 1px solid var(--lab-line); }
+.lab-head h2 { margin: 0; font-size: 22px; font-weight: 800; }
+.lab-head p { margin: 0; color: var(--lab-dim); font-size: 13px; }
+.lab-close { border: 1.5px solid var(--lab-dim); background: transparent; color: var(--lab-txt); border-radius: 10px; padding: 4px 16px; min-height: 38px; font-weight: 700; }
+.lab-body { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 16px; padding: 16px 20px; }
+.rack { background: var(--lab-panel); border: 1px solid var(--lab-line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.grp h3 { margin: 0 0 6px; font-size: 12.5px; font-weight: 700; color: var(--lab-dim); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.sb { border: 1.5px solid var(--lab-line); background: #0F1C31; color: var(--lab-txt); border-radius: 8px; padding: 2px 10px; min-height: 34px; font-size: 13px; font-weight: 600; }
+.sb[aria-pressed=true] { background: var(--amber); color: #1B1405; border-color: var(--amber); }
+.knobs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 6px; }
+.knob { display: grid; justify-items: center; gap: 2px; text-align: center; border-radius: 10px; padding: 4px 0; }
+.dial { --a: 0deg; width: 54px; height: 54px; border-radius: 50%; position: relative; cursor: ns-resize;
+  background: radial-gradient(circle at 35% 30%, #4A5E7D, #1B2B44 62%, #0C1626); border: 2px solid #3A5276; box-shadow: 0 3px 0 #060B14, inset 0 0 0 4px #14233A; }
+.dial i { position: absolute; inset: 0; rotate: var(--a); }
+.dial i::after { content: ''; position: absolute; inset-inline-start: 50%; inset-block-start: 5px; width: 4px; height: 15px; margin-inline-start: -2px; border-radius: 2px; background: var(--amber); }
+.kl { font-size: 11.5px; color: var(--lab-dim); line-height: 1.3; }
+.kv { font-size: 12.5px; font-weight: 700; color: var(--mint); direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; }
+#msgIn { width: 100%; background: #07101E; color: var(--amber); border: 1.5px solid var(--lab-line); border-radius: 8px; padding: 6px 10px; font: inherit; font-weight: 600; }
+
+.screens { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: start; }
+.screen { margin: 0; background: #07101E; border: 1.5px solid var(--lab-line); border-radius: 10px; overflow: hidden; }
+.screen.wide { grid-column: 1 / -1; }
+.screen figcaption { font-size: 12px; font-weight: 700; color: var(--lab-dim); padding: 4px 10px; border-bottom: 1px solid var(--lab-line); }
+.screen canvas { display: block; width: 100%; height: 150px; }
+.screen.wide canvas { height: 176px; }
+
+.lab-foot { padding: 4px 20px 16px; display: grid; gap: 10px; }
+.cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.cell { background: #07101E; border: 1px solid var(--lab-line); border-radius: 8px; padding: 4px 10px 6px; display: grid; grid-template-columns: 1fr auto; align-items: baseline; }
+.cl { grid-column: 1 / -1; font-size: 11.5px; color: var(--lab-dim); }
+.cv { font-size: 20px; font-weight: 800; color: var(--amber); direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; }
+.cu { font-size: 11px; color: var(--lab-dim); direction: ltr; padding-inline-start: 6px; }
+.rxline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 14px; }
+.led { width: 14px; height: 14px; border-radius: 50%; background: #444; box-shadow: 0 0 0 2px #0a0f18; }
+.led[data-s="2"] { background: #3DDC84; box-shadow: 0 0 10px #3DDC84; }
+.led[data-s="1"] { background: var(--amber); box-shadow: 0 0 10px var(--amber); }
+.led[data-s="0"] { background: #FF5A4F; box-shadow: 0 0 10px #FF5A4F; }
+.msgs { color: var(--lab-txt); unicode-bidi: plaintext; }
+.note { margin: 0; font-size: 12px; color: var(--lab-dim); }
+
+@media (max-width: 860px) {
+  .lab-body { grid-template-columns: 1fr; }
+  .knobs { grid-template-columns: repeat(4, 1fr); }
+  .screens { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .bar { flex-direction: column; padding: 10px 12px; }
+  .brand p, .hint { display: none; }
+  .actions { justify-content: flex-start; }
+  .actions button { min-height: 38px; padding: 4px 10px; font-size: 13px; }
+  .panel { inset-block: auto 0; inset-inline: 0; width: auto; max-height: 64vh; border-radius: 16px 16px 0 0; border-inline-width: 0; border-block-end-width: 0; }
+  body:has(.panel:not([hidden])) .chips { display: none; }
+  .tracebar { inset-block-start: 110px; inset-inline: 10px; }
+  .lab { padding: 0; }
+  .lab-shell { border-radius: 0; height: 100%; }
+  .knobs { gap: 8px 2px; }
+  .dial { width: 46px; height: 46px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---------- power additions ---------- */
+.actions .power { background: #E0A100; color: #1B1405; border-color: #8A6200; }
+.actions .power[aria-pressed=true] { background: var(--signal); color: #fff; border-color: var(--signal-ink); }
+.chip.pw { border-color: #8A6200; background: #FFF4D2; }
+.chip.pw[aria-pressed=true] { background: #E0A100; color: #1B1405; }
+.layerbar { max-width: 460px; justify-content: space-between; inset-block-start: 74px; }
+.facts { list-style: none; padding: 0; margin: 0; font-size: 13px; }
+.facts li { border-inline-start: 3px solid #E0A100; padding: 4px 10px; margin: 0 0 6px; background: #FFF9E6; border-radius: 4px; }
+.facts small { color: var(--ink-2); }
+.calc { border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; }
+.calc-title { margin: 0 0 6px; font-weight: 800; }
+.crow { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; margin-bottom: 6px; font-size: 13px; }
+.crow output { font-weight: 700; direction: ltr; unicode-bidi: isolate; }
+.crow input { grid-column: 1 / -1; width: 100%; accent-color: var(--signal); }
+.cres { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; margin-top: 6px; }
+.cres div { background: #17233A; color: #fff; border-radius: 8px; padding: 4px 10px; display: grid; }
+.cres span { font-size: 11.5px; color: #BBD3EC; }
+.cres strong { font-size: 18px; color: #FFD23F; direction: ltr; unicode-bidi: isolate; text-align: start; }
+
+/* ---------- report modal ---------- */
+.report { position: fixed; inset: 0; z-index: 25; background: rgba(22, 34, 59, .55); display: grid; place-items: center; padding: 14px; }
+.report-shell { width: min(820px, 100%); max-height: 100%; overflow-y: auto; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 14px; }
+.report-head { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 18px; background: var(--paper); border-bottom: 1.5px solid var(--line); }
+.report-head h2 { margin: 0; font-size: 20px; font-weight: 800; }
+.report-close { border: 1.5px solid var(--ink); background: #fff; border-radius: 10px; padding: 4px 16px; min-height: 38px; font-weight: 700; }
+.report-body { padding: 8px 18px 22px; }
+.report-body h3 { margin: 18px 0 6px; font-size: 15px; color: var(--fiber); font-weight: 800; }
+.report-body .lead { margin: 10px 0 0; }
+.rlayer { border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; background: #fff; }
+.rlayer p { margin: 2px 0 6px; font-size: 14px; }
+.rlayer button { border: 1.5px solid var(--ink); background: var(--paper); border-radius: 8px; padding: 2px 12px; min-height: 32px; font-weight: 700; margin-top: 6px; }
+.rrow { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { background: #E8EEF7; border-radius: 999px; padding: 0 10px; font-size: 12.5px; }
+.srcs { padding-inline-start: 22px; font-size: 13.5px; }
+.srcs a { color: #1D4FB8; overflow-wrap: anywhere; }
+
+  </style>
+</head>
+<body>
+  <canvas id="stage" aria-label="3D city"></canvas>
+  <div id="labels"></div>
+
+  <header class="bar">
+    <div class="brand">
+      <h1 data-i18n="title">شهر مخابراتی تهران</h1>
+      <p data-i18n="subtitle"></p>
+    </div>
+    <div class="actions">
+      <button type="button" id="btnHome" class="ghost" data-i18n-label="units" aria-label="Home">⌂</button>
+      <button type="button" id="btnTrace" class="primary" aria-pressed="false" data-i18n="trace"></button>
+      <button type="button" id="btnTracePower" class="power" aria-pressed="false" data-i18n="tracePower"></button>
+      <button type="button" id="btnReport" class="ghost" data-i18n="report"></button>
+      <button type="button" id="btnRadio" class="signal" data-i18n="radio"></button>
+      <button type="button" id="btnLang" class="ghost" lang="en">English</button>
+    </div>
+  </header>
+
+  <p class="hint" data-i18n="hint"></p>
+
+  <div id="traceBar" class="tracebar" role="status" aria-live="polite" hidden>
+    <span id="traceStep" class="ts"></span>
+    <strong id="traceUnit"></strong>
+    <span id="traceText"></span>
+    <button type="button" id="traceStop" data-i18n="traceStop"></button>
+  </div>
+
+  <div id="layerBar" class="tracebar layerbar" hidden><strong id="layerName"></strong><button type="button" id="layerClear" data-i18n="clearHl"></button></div>
+
+  <nav id="chips" class="chips" aria-label="units"></nav>
+
+  <aside id="panel" class="panel" hidden aria-live="polite">
+    <button type="button" id="pClose" class="x" data-i18n-label="close" aria-label="Close">×</button>
+    <p id="pCat" class="cat"></p>
+    <h2 id="pName"></h2>
+    <figure class="anim">
+      <canvas id="pCanvas" width="480" height="270"></canvas>
+      <figcaption id="pAnimCap"></figcaption>
+    </figure>
+    <h3 data-i18n="function"></h3>
+    <p id="pDesc" class="desc"></p>
+    <div id="pCalcWrap" hidden><h3 data-i18n="calc"></h3><div id="pCalc" class="calc"></div></div>
+    <h3 data-i18n="specs"></h3>
+    <dl id="pSpecs"></dl>
+    <div id="pFactsWrap" hidden><h3 data-i18n="tehranFacts"></h3><ul id="pFacts" class="facts"></ul></div>
+    <h3 data-i18n="models"></h3>
+    <ul id="pModels"></ul>
+    <p class="fine" data-i18n="modelsNote"></p>
+    <button type="button" id="btnOpenRadio" class="signal wide" data-i18n="openRadio" hidden></button>
+    <p class="fine" data-i18n="eduNote"></p>
+  </aside>
+
+  <section id="report" class="report" hidden></section>
+  <section id="lab" class="lab" hidden></section>
+  <div id="loading" class="loading" data-i18n="loading">در حال ساخت شهر…</div>
+
+  <script>
+/* i18n.js — FA/EN UI strings. Elements use data-i18n (text) or data-i18n-label (aria-label/title). */
+(function () {
+  'use strict';
+  const S = {
+    fa: {
+      title: 'شهر مخابراتی تهران',
+      subtitle: 'از لپ‌تاپ تا دیتاسنتر؛ شبکه‌ی ارتباطی را روی نقشه ببینید',
+      hint: 'بکشید تا بچرخد · اسکرول برای زوم · روی هر ساختمان بزنید',
+      trace: 'ردیابی یک بسته',
+      tracePower: 'ردیابی برق',
+      report: 'گزارش و منابع',
+      tehranFacts: 'اعداد عمومی تهران (منبع‌دار)',
+      layersT: 'لایه‌های شبکه', actorsT: 'بازیگران و نقش‌ها', kpisT: 'شاخص‌های ارزیابی', factsT: 'اعداد منتشرشده', sourcesT: 'منابع',
+      showInCity: 'نمایش در شهر', clearHl: 'پاک‌کردن نمایش', layerShown: 'لایه',
+      calc: 'ماشین‌حساب',
+      traceStop: 'توقف ردیابی',
+      radio: 'آزمایشگاه رادیویی',
+      lang: 'English',
+      close: 'بستن',
+      loading: 'در حال ساخت شهر…',
+      noGL: 'کتابخانه‌ی Three.js بارگذاری نشد (یا WebGL پشتیبانی نمی‌شود). راه‌حل: فایل three.min.js (نسخه‌ی r128) را یک بار دانلود کنید و کنار index.html در ریپو آپلود کنید.',
+      function: 'کارکرد',
+      specs: 'مشخصات فنی',
+      models: 'تجهیزات و مدل‌های نمونه',
+      modelsNote: 'نمونه‌های رایج در صنعت؛ لزوماً به معنی استقرار در تهران نیست.',
+      openRadio: 'باز کردن در آزمایشگاه رادیویی',
+      units: 'واحدهای شهر',
+      tracing: 'مسیر بسته',
+      eduNote: 'مدل آموزشیِ ساده‌شده؛ جای‌گذاری ساختمان‌ها نمادین است.',
+      // lab
+      labTitle: 'آزمایشگاه رادیویی',
+      labSub: 'فرستنده ← کانال ← گیرنده، با ریاضیات واقعی بودجه‌ی لینک',
+      scenarios: 'سناریو',
+      modulation: 'مدولاسیون',
+      channel: 'کانال',
+      awgn: 'فقط نویز',
+      rayleigh: 'محوشدگی ریلی',
+      message: 'پیام',
+      freq: 'فرکانس', dist: 'فاصله', ptx: 'توان فرستنده', gtx: 'بهره‌ی آنتن Tx', grx: 'بهره‌ی آنتن Rx',
+      extra: 'تلفات اضافی', bw: 'پهنای باند', nf: 'نویز گیرنده',
+      fspl: 'تلفات فضای آزاد', prx: 'توان دریافتی', noise: 'کف نویز', snr: 'SNR', ebn0: 'Eb/N0',
+      berT: 'BER نظری', berS: 'BER شبیه‌سازی', snrOut: 'SNR خروجی', 
+      scope: 'اسیلوسکوپ', spectrum: 'طیف', constellation: 'منظومه‌ی سیگنال', berCurve: 'منحنی BER',
+      audio: 'صدا: اصلی و بازیابی‌شده', snrCurve: 'SNR خروجی بر حسب SNR ورودی',
+      tx: 'ارسال', rx: 'دریافت', dem: 'خروجی',
+      sent: 'ارسال‌شده', decoded: 'دریافت‌شده',
+      statusGood: 'ارتباط سالم', statusMarg: 'مرزی', statusBad: 'ارتباط قطع/خراب',
+      bits: 'بیت', noErr: 'بدون خطا در',
+      noteDigital: 'نرخ نمادها برابر پهنای باند فرض شده؛ بدون کدگذاری تصحیح خطا (FEC).',
+      noteAnalog: 'حامل در شبیه‌ساز مقیاس‌دهی شده است؛ محور فرکانس به MHz واقعی برگردانده می‌شود.',
+      dbAxis: 'dB', offset: 'اختلاف از حامل'
+    },
+    en: {
+      title: 'Tehran Telecom City',
+      subtitle: 'From laptop to data center — see the communication network on a map',
+      hint: 'Drag to rotate · Scroll to zoom · Click any building',
+      trace: 'Trace a packet',
+      tracePower: 'Trace power',
+      report: 'Report & sources',
+      tehranFacts: 'Public Tehran figures (sourced)',
+      layersT: 'Network layers', actorsT: 'Actors & roles', kpisT: 'Evaluation indicators', factsT: 'Published figures', sourcesT: 'Sources',
+      showInCity: 'Show in city', clearHl: 'Clear', layerShown: 'Layer',
+      calc: 'Calculator',
+      traceStop: 'Stop tracing',
+      radio: 'Radio lab',
+      lang: 'فارسی',
+      close: 'Close',
+      loading: 'Building the city…',
+      noGL: 'Three.js failed to load (or WebGL is unsupported). Fix: download three.min.js (r128) once and upload it next to index.html in the repo.',
+      function: 'What it does',
+      specs: 'Technical data',
+      models: 'Equipment & example models',
+      modelsNote: 'Common industry examples; not a claim about what is installed in Tehran.',
+      openRadio: 'Open in the radio lab',
+      units: 'City units',
+      tracing: 'Packet path',
+      eduNote: 'Simplified teaching model; building placement is symbolic.',
+      labTitle: 'Radio lab',
+      labSub: 'Transmitter → channel → receiver, with a real link budget',
+      scenarios: 'Scenario',
+      modulation: 'Modulation',
+      channel: 'Channel',
+      awgn: 'Noise only',
+      rayleigh: 'Rayleigh fading',
+      message: 'Message',
+      freq: 'Frequency', dist: 'Distance', ptx: 'Tx power', gtx: 'Tx antenna gain', grx: 'Rx antenna gain',
+      extra: 'Extra loss', bw: 'Bandwidth', nf: 'Noise figure',
+      fspl: 'Free-space loss', prx: 'Received power', noise: 'Noise floor', snr: 'SNR', ebn0: 'Eb/N0',
+      berT: 'BER theory', berS: 'BER simulated', snrOut: 'Output SNR',
+      scope: 'Oscilloscope', spectrum: 'Spectrum', constellation: 'Constellation', berCurve: 'BER curve',
+      audio: 'Audio: original vs recovered', snrCurve: 'Output SNR vs input SNR',
+      tx: 'TX', rx: 'RX', dem: 'DEMOD',
+      sent: 'Sent', decoded: 'Received',
+      statusGood: 'Link healthy', statusMarg: 'Marginal', statusBad: 'Link failing',
+      bits: 'bits', noErr: 'no errors in',
+      noteDigital: 'Symbol rate = bandwidth; no forward error correction (FEC).',
+      noteAnalog: 'The simulator carrier is scaled down; the frequency axis is mapped back to real MHz.',
+      dbAxis: 'dB', offset: 'Offset from carrier'
+    }
+  };
+  const HAS_FA = /[\u0600-\u06FF]/;
+  const RUN = /[A-Za-z0-9µ≈<+−\u2011√\u0370-\u03FF][A-Za-z0-9µ.,:\/%+\-−\u2011–≈·×√²³\u2081\u2082\u0370-\u03FF' ]*[A-Za-z0-9µ%°²³\u2081\u2082\u0370-\u03FF]|[A-Za-z0-9µ°\u0370-\u03FF]/g;
+  const I18N = {
+    lang: 'fa', S: S,
+    t(k) { return (S[this.lang] && S[this.lang][k]) || k; },
+    pick(o) { return o == null ? '' : (typeof o === 'string' ? o : o[this.lang]); },
+    // Bidi helper: wrap Latin/number runs in isolates so they keep their order inside Persian text.
+    iso(s) {
+      s = String(s == null ? '' : s);
+      return (this.lang === 'fa' && HAS_FA.test(s)) ? s.replace(RUN, '\u2066$&\u2069') : s;
+    },
+    cv(s) {                                  // same for <canvas> text; also says which direction to draw in
+      s = String(s);
+      if (!HAS_FA.test(s)) return { s: s, dir: 'ltr' };
+      return { s: s.replace(RUN, '\u2066$&\u2069'), dir: 'rtl' };
+    },
+    set(lang) {
+      this.lang = lang;
+      const d = document.documentElement;
+      d.lang = lang; d.dir = lang === 'fa' ? 'rtl' : 'ltr';
+      document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = this.t(el.dataset.i18n); });
+      document.querySelectorAll('[data-i18n-label]').forEach((el) => {
+        const v = this.t(el.dataset.i18nLabel); el.setAttribute('aria-label', v); el.title = v;
+      });
+      document.title = this.t('title') + ' · Mokhaberat';
+      try { localStorage.setItem('mokhaberat.lang', lang); } catch (e) { /* ignore */ }
+      window.dispatchEvent(new CustomEvent('langchange', { detail: lang }));
+    }
+  };
+  window.I18N = I18N;
+})();
+
+  </script>
+  <script>
+/* units.js — bilingual content for every clickable unit in the city.
+ * Specs are standards-level figures (ITU-T / 3GPP / IEEE / DVB). Equipment lists are industry examples.
+ * To add a unit: add an entry here, a builder in city.js, and an animation in anim.js. */
+(function () {
+  'use strict';
+  const b = (fa, en) => ({ fa: fa, en: en });
+  const sp = (kfa, ken, vfa, ven) => ({ k: b(kfa, ken), v: b(vfa, ven === undefined ? vfa : ven) });
+
+  window.UNITS = [
+    {
+      id: 'user', layer: 'access', preset: 'wifi',
+      cat: b('دسترسی', 'Access'),
+      name: b('ترمینال‌های کاربر (گوشی و لپ‌تاپ)', 'User terminals (phone & laptop)'),
+      desc: b(
+        'لپ‌تاپ از طریق Wi‑Fi به مودم/ONT خانه وصل می‌شود. ONT نور فیبر را به اترنت تبدیل می‌کند و بسته‌ها به سمت کافو می‌روند. گوشی هم می‌تواند از همین Wi‑Fi یا مستقیم از دکل 4G/5G استفاده کند.',
+        'A laptop joins the home ONT/router over Wi‑Fi. The ONT converts the fiber\'s light into Ethernet and packets head for the street cabinet. A phone can use the same Wi‑Fi or talk straight to a 4G/5G tower.'),
+      specs: [
+        sp('Wi‑Fi 6 (802.11ax)', 'Wi‑Fi 6 (802.11ax)', '2.4 و 5 GHz؛ کانال 20 تا 160 MHz؛ تا 1024‑QAM', '2.4 & 5 GHz; 20–160 MHz channels; up to 1024‑QAM'),
+        sp('5G NR باند n78', '5G NR band n78', '3300–3800 MHz، TDD', '3300–3800 MHz, TDD'),
+        sp('LTE باند 3', 'LTE band 3', '1800 MHz، FDD', '1800 MHz, FDD'),
+        sp('GPON سمت ONT', 'GPON at the ONT', 'دریافت 1490 nm (2.5 Gbps) · ارسال 1310 nm (1.25 Gbps)', 'receive 1490 nm (2.5 Gbps) · transmit 1310 nm (1.25 Gbps)')
+      ],
+      models: [b('ONT/ONU نوع GPON با کانکتور SC/APC', 'GPON ONT/ONU with SC/APC connector'), b('روتر Wi‑Fi 6 (802.11ax)', 'Wi‑Fi 6 router (802.11ax)'), b('گوشی 5G با باندهای n78 / n3', '5G smartphone with n78 / n3 bands')],
+      anim: b('Wi‑Fi از لپ‌تاپ تا ONT، سپس نور در فیبر', 'Wi‑Fi from laptop to ONT, then light in the fiber')
+    },
+    {
+      id: 'cabinet', layer: 'aggregation', preset: null,
+      cat: b('توزیع', 'Distribution'),
+      name: b('کافو / نقطه‌ی توزیع نوری (FTTH)', 'Street cabinet / optical distribution point (FTTH)'),
+      desc: b(
+        'یک تقسیم‌کننده‌ی نوریِ غیرفعال (بدون برق) یک فیبر ورودی از مرکز مخابرات را بین چند خانه پخش می‌کند. هر خانه در بازه‌ی زمانیِ خودش می‌فرستد تا ارسال‌ها با هم برخورد نکنند (TDMA).',
+        'A passive (unpowered) optical splitter shares one feeder fiber from the exchange among many homes. Each home transmits in its own time slot (TDMA) so uplink bursts never collide.'),
+      specs: [
+        sp('نسبت تقسیم', 'Split ratio', '1:8 · 1:16 · 1:32 (تا 1:128)', '1:8 · 1:16 · 1:32 (up to 1:128)'),
+        sp('افت تقسیم‌کننده', 'Splitter loss', 'حدود 3.5 dB به ازای هر طبقه‌ی 1:2؛ 1:32 ≈ 17 dB', '≈ 3.5 dB per 1:2 stage; 1:32 ≈ 17 dB'),
+        sp('برد', 'Reach', 'تا 20 km (برد منطقی 60 km، ITU‑T G.984)', 'up to 20 km (60 km logical, ITU‑T G.984)'),
+        sp('تغذیه‌ی برق', 'Power', 'ندارد (غیرفعال)', 'none (passive)'),
+        sp('نوع فیبر', 'Fiber type', 'G.652D تک‌مد', 'G.652D single‑mode')
+      ],
+      models: [b('اسپلیتر PLC نوع 1:8 / 1:32', 'PLC splitter 1:8 / 1:32'), b('FDH (Fiber Distribution Hub)', 'FDH (Fiber Distribution Hub)'), b('کافوی مسی VDSL2 (FTTC): حدود 100 Mbps روی مس', 'Copper VDSL2 cabinet (FTTC): ~100 Mbps over copper')],
+      facts: [ { text: b('همان گزارش: حدود 225 هزار مشترک فعال FTTH؛ ضریب نفوذ FTTH برابر 5.7٪ و xDSL حدود 24٪ اعلام شده است. تعریف مخرج نفوذ مشخص نیست (225 هزار ÷ 6.375 میلیون ≈ 3.5٪ است)، پس این اعداد را مستقیم با هم مقایسه نکنید.', 'Same report: about 225,000 active FTTH subscribers; FTTH penetration stated as 5.7% and xDSL about 24%. The denominator is not defined (225k ÷ 6.375M ≈ 3.5%), so do not compare these numbers directly.'), src: [1] } ],
+      anim: b('یک فیبر ورودی، چند خانه؛ پایین‌سو آبی، بالاسو نارنجی', 'One feeder fiber, many homes; downstream teal, upstream orange')
+    },
+    {
+      id: 'exchange', layer: 'aggregation', preset: null,
+      cat: b('دسترسی و سوئیچ', 'Access & switching'),
+      name: b('مرکز مخابرات (Central Office)', 'Telephone exchange (Central Office)'),
+      desc: b(
+        'ساختمانی که خطوط مشترکین در آن جمع می‌شوند: قاب توزیع (MDF/ODF)، دستگاه OLT یا DSLAM، سوئیچ صوتی/IMS و برق اضطراری با باتری 48 ولت و ژنراتور تا سرویس هنگام قطع برق ادامه یابد.',
+        'The building where subscriber lines converge: distribution frames (MDF/ODF), the OLT or DSLAM, voice switching/IMS, and backup power — 48 V batteries and generators — so service survives a mains outage.'),
+      specs: [
+        sp('برق', 'Power', '‑48 V DC (رکتیفایر + باتری + دیزل‌ژنراتور)', '−48 V DC (rectifiers + batteries + diesel generator)'),
+        sp('پورت GPON', 'GPON port', '2.5 Gbps پایین‌سو / 1.25 Gbps بالاسو، تا 64 ONT', '2.5 Gbps down / 1.25 Gbps up, up to 64 ONTs'),
+        sp('آپ‌لینک OLT', 'OLT uplink', '10 / 25 / 100 GbE', '10 / 25 / 100 GbE'),
+        sp('صوت', 'Voice', 'G.711، ‏64 kbps برای هر تماس (SIP/IMS)', 'G.711, 64 kbps per call (SIP/IMS)'),
+        sp('هدف دردسترس‌بودن', 'Availability target', '99.99٪ (حدود 52 دقیقه توقف در سال)', '99.99% (≈ 52 min downtime per year)')
+      ],
+      models: [b('شاسی OLT (خانواده‌هایی مثل Huawei MA5800، Nokia ISAM FX، ZTE C600)', 'OLT chassis (families such as Huawei MA5800, Nokia ISAM FX, ZTE C600)'), b('IMS / سافت‌سوئیچ', 'IMS / softswitch'), b('رکتیفایر 48 ولت + بانک باتری', '−48 V rectifier + battery bank')],
+      facts: [ { text: b('بر اساس اظهارات مدیر مخابرات منطقه تهران (مرداد 1405): حدود 6 میلیون و 375 هزار مشترک فعال تلفن ثابت در شهر تهران؛ آمار یک مقطع زمانی است.', 'Per the Tehran regional telecom manager (Aug 2026): about 6.375 million active fixed-line subscribers in Tehran city; a point-in-time figure.'), src: [1] } ],
+      anim: b('خطوط مشترکین ← OLT ← آپ‌لینک؛ برق اضطراری در پایین', 'Subscriber lines → OLT → uplink; backup power below')
+    },
+    {
+      id: 'fiber', layer: 'transport', preset: null,
+      cat: b('انتقال', 'Transport'),
+      name: b('ستون فقرات فیبر و کانال‌کشی شهری (DWDM)', 'Fiber backbone & urban ducts (DWDM)'),
+      desc: b(
+        'نور در هسته‌ی 9 میکرونیِ فیبر تک‌مد با بازتابِ کلیِ داخلی پیش می‌رود. با DWDM ده‌ها طول‌موجِ رنگیِ مختلف همزمان در یک فیبر می‌روند. در شهر، فیبر داخل لوله‌های HDPE زیر خیابان است و در منهول‌ها اتصال (اسپلایس) می‌شود.',
+        'Light travels down the 9 µm core of single‑mode fiber by total internal reflection. With DWDM, dozens of different wavelengths (colors) share one fiber. In the city the fiber sits in HDPE ducts under the street and is spliced in manholes.'),
+      specs: [
+        sp('فیبر', 'Fiber', 'G.652D تک‌مد: هسته 9 µm، غلاف 125 µm', 'G.652D single‑mode: core 9 µm, cladding 125 µm'),
+        sp('تضعیف', 'Attenuation', 'حدود 0.2 dB/km در 1550 nm', '≈ 0.2 dB/km at 1550 nm'),
+        sp('باند DWDM', 'DWDM band', 'باند C: 1530–1565 nm؛ شبکه‌ی 50/100 GHz ← 40 تا 96 کانال', 'C‑band 1530–1565 nm; 50/100 GHz grid → 40–96 channels'),
+        sp('نرخ هر طول‌موج', 'Rate per wavelength', '100 / 200 / 400 Gbps (منسجم DP‑QPSK / 16QAM)', '100 / 200 / 400 Gbps (coherent DP‑QPSK / 16QAM)'),
+        sp('تقویت', 'Amplification', 'EDFA تقریباً هر 80 km', 'EDFA roughly every 80 km'),
+        sp('تأخیر', 'Latency', 'حدود 5 µs به ازای هر km', '≈ 5 µs per km')
+      ],
+      models: [b('ترمینال DWDM / ROADM', 'DWDM terminal / ROADM'), b('تقویت‌کننده‌ی EDFA', 'EDFA amplifier'), b('لوله‌ی HDPE ‏40 mm + میکرودکت، منهول در نقاط اتصال', 'HDPE duct 40 mm + microduct, manholes at splice points')],
+      facts: [ { text: b('طول شبکه‌ی فیبر نوری استان تهران 16٬400 کیلومتر اعلام شده (خرداد 1405). این رقم مربوط به استان است، نه محدوده‌ی شهرداری تهران.', 'Fiber network length for Tehran province was reported as 16,400 km (Jun 2026). This is the province, not the municipal city area.'), src: [2] } ],
+      anim: b('بازتاب کلی داخلی و ترکیب طول‌موج‌ها (WDM)', 'Total internal reflection and wavelength multiplexing (WDM)')
+    },
+    {
+      id: 'datacenter', layer: 'core', preset: null,
+      cat: b('هسته', 'Core'),
+      name: b('دیتاسنتر', 'Data center'),
+      desc: b(
+        'هزاران سرور در رک‌ها؛ هر سرور به یک سوئیچ لیف و هر لیف به سوئیچ‌های اسپاین وصل است (Leaf‑Spine) تا بین هر دو سرور مسیری کوتاه و هم‌طول وجود داشته باشد. برق (UPS + دیزل) و سرمایش (چیلر) بخش بزرگی از ساختمان‌اند.',
+        'Thousands of servers in racks; each server plugs into a leaf switch and every leaf connects to every spine (Leaf‑Spine), so any two servers are a short, equal‑length path apart. Power (UPS + diesel) and cooling (chillers) take much of the building.'),
+      specs: [
+        sp('معماری شبکه', 'Fabric', 'Leaf‑Spine با EVPN‑VXLAN', 'Leaf‑Spine with EVPN‑VXLAN'),
+        sp('لینک‌ها', 'Links', 'سرور 25 GbE؛ آپ‌لینک 100/400 GbE', 'server 25 GbE; uplinks 100/400 GbE'),
+        sp('رک', 'Rack', '42U، معمولاً 5 تا 15 kW', '42U, typically 5–15 kW'),
+        sp('PUE', 'PUE', 'حدود 1.3 تا 1.6 (برق کل ÷ برق تجهیزات IT)', '≈ 1.3–1.6 (total power ÷ IT power)'),
+        sp('افزونگی', 'Redundancy', 'Tier III: ‏N+1، تعمیر بدون توقف', 'Tier III: N+1, concurrently maintainable')
+      ],
+      models: [b('سوئیچ ToR/Leaf: رده‌ی 48×25G + 8×100G', 'ToR/leaf switch: 48×25G + 8×100G class'), b('سوئیچ Spine: رده‌ی 32×100/400G', 'Spine switch: 32×100/400G class'), b('UPS + دیزل‌ژنراتور + CRAH/چیلر', 'UPS + diesel genset + CRAH/chiller')],
+      anim: b('معماری Leaf‑Spine و بسته‌های در حال عبور', 'Leaf‑Spine fabric with packets in flight')
+    },
+    {
+      id: 'ixp', layer: 'external', preset: null,
+      cat: b('هسته', 'Core'),
+      name: b('نقطه‌ی تبادل ترافیک و دروازه‌ی بین‌الملل', 'Internet exchange & international gateway'),
+      desc: b(
+        'شبکه‌ها (AS) اینجا با پروتکل BGP به هم وصل می‌شوند و مسیرهایشان را اعلام می‌کنند. ترافیک داخلی همین‌جا رد و بدل می‌شود و ترافیک خارجی از لینک‌های بین‌المللی (زمینی، دریایی یا ماهواره‌ای) بیرون می‌رود.',
+        'Networks (ASes) interconnect here using BGP and advertise their routes. Domestic traffic is exchanged on the spot; foreign traffic leaves over international links — terrestrial, submarine or satellite.'),
+      specs: [
+        sp('مسیریابی', 'Routing', 'BGP‑4 (RFC 4271) و route server', 'BGP‑4 (RFC 4271) and route servers'),
+        sp('شبکه‌ی تبادل', 'Peering LAN', 'اترنت 10/100/400 GbE، ‏MTU برابر 1500 یا 9000', 'Ethernet 10/100/400 GbE, MTU 1500 or 9000'),
+        sp('هویت', 'Identity', 'هر شبکه یک شماره‌ی AS دارد', 'every network has an AS number'),
+        sp('مسیرهای خروج', 'Transit paths', 'لینک مرزی زمینی · کابل دریایی · ماهواره', 'land‑border links · submarine cable · satellite')
+      ],
+      models: [b('روتر هسته/لبه: رده‌ی Juniper MX، Cisco ASR 9000، Nokia 7750 SR', 'Core/edge router class: Juniper MX, Cisco ASR 9000, Nokia 7750 SR'), b('Route server: ‏BIRD یا OpenBGPd', 'Route server: BIRD or OpenBGPd'), b('فایروال و تجهیزات مقابله با DDoS', 'Firewalls and DDoS scrubbing appliances')],
+      anim: b('شبکه‌ها از طریق یک سوئیچ مرکزی مسیر رد و بدل می‌کنند', 'Networks exchange routes through a central switch')
+    },
+    {
+      id: 'satellite', layer: 'external', preset: 'sat',
+      cat: b('رادیویی', 'Radio'),
+      name: b('ایستگاه زمینی ماهواره', 'Satellite earth station'),
+      desc: b(
+        'دیش سیگنال را به ماهواره‌ی زمین‌آهنگ (35٬786 کیلومتر بالاتر) می‌فرستد. چون موج باید حدود 72 هزار کیلومتر برود و برگردد، تأخیر رفت‌وبرگشت حدود نیم‌ثانیه است؛ ماهواره‌های مدار پایین آن را به ده‌ها میلی‌ثانیه می‌رسانند.',
+        'The dish beams the signal to a geostationary satellite 35,786 km up. Because the wave travels about 72,000 km up and down, round‑trip delay is roughly half a second; low‑orbit satellites cut that to tens of milliseconds.'),
+      specs: [
+        sp('باندها', 'Bands', 'C: ‏4/6 GHz · Ku: ‏12/14 GHz · Ka: ‏20/30 GHz', 'C 4/6 GHz · Ku 12/14 GHz · Ka 20/30 GHz'),
+        sp('قطر دیش', 'Dish diameter', '1.2 تا 9 متر', '1.2 – 9 m'),
+        sp('مدار زمین‌آهنگ', 'GEO orbit', '35,786 km ← یک پرش ≈ 239 ms؛ رفت‌وبرگشت ≈ 480 ms+', '35,786 km → one hop ≈ 239 ms; round trip ≈ 480 ms+'),
+        sp('مدار پایین', 'LEO orbit', '≈ 550 km ← رفت‌وبرگشت ≈ 25–50 ms', '≈ 550 km → round trip ≈ 25–50 ms'),
+        sp('نویز LNB', 'LNB noise figure', 'حدود 0.5 تا 1 dB', '≈ 0.5–1 dB'),
+        sp('مدولاسیون', 'Modulation', 'DVB‑S2/S2X: از QPSK تا 32APSK + کد LDPC', 'DVB‑S2/S2X: QPSK to 32APSK + LDPC coding')
+      ],
+      models: [b('آنتن پارابولیک با LNB (دریافت) و BUC (ارسال)', 'Parabolic antenna with LNB (receive) and BUC (transmit)'), b('مودم DVB‑S2X', 'DVB‑S2X modem'), b('تقویت‌کننده‌ی توان SSPA رده‌ی 100–400 W', 'SSPA power amplifier, 100–400 W class')],
+      anim: b('ارسال به ماهواره‌ی زمین‌آهنگ و بازگشت؛ تأخیر انتشار', 'Uplink to a GEO satellite and back; propagation delay')
+    },
+    {
+      id: 'broadcast', layer: null, preset: 'fm',
+      cat: b('رادیویی', 'Radio'),
+      name: b('برج پخش رادیو و تلویزیون', 'Broadcast tower'),
+      desc: b(
+        'ارتفاع بیشتر یعنی افق رادیویی دورتر: برد دید مستقیم ≈ 4.12·(√h₁+√h₂) کیلومتر (h به متر). در FM فرکانس حامل با صدا تغییر می‌کند و در AM دامنه. مدل سه‌بعدی الهام‌گرفته از برج میلاد (435 متر) است.',
+        'More height means a farther radio horizon: line‑of‑sight range ≈ 4.12·(√h₁+√h₂) km (h in meters). FM varies the carrier\'s frequency with the sound; AM varies its amplitude. The 3D model is inspired by Milad Tower (435 m).'),
+      specs: [
+        sp('FM', 'FM', '87.5–108 MHz؛ انحراف ±75 kHz؛ کانال 200 kHz', '87.5–108 MHz; ±75 kHz deviation; 200 kHz channel'),
+        sp('AM (موج متوسط)', 'AM (medium wave)', '531–1602 kHz؛ فاصله‌ی کانال 9 kHz', '531–1602 kHz; 9 kHz channel spacing'),
+        sp('تلویزیون دیجیتال', 'Digital TV', 'DVB‑T2 در UHF (حدود 470–790 MHz)', 'DVB‑T2 in UHF (≈ 470–790 MHz)'),
+        sp('افق رادیویی', 'Radio horizon', 'h = 400 m ← حدود 85 تا 95 km', 'h = 400 m → ≈ 85–95 km'),
+        sp('توان تابشی (ERP)', 'Radiated power (ERP)', 'از چند kW تا ده‌ها kW', 'several kW to tens of kW')
+      ],
+      models: [b('فرستنده‌ی FM ‏1 تا 50 kW + کامبینر', 'FM transmitter 1–50 kW + combiner'), b('فرستنده‌ی DVB‑T2 + آنتن پنلی UHF', 'DVB‑T2 transmitter + UHF panel antenna'), b('فیدر کواکس/موجبر و حفاظت صاعقه', 'Coax/waveguide feeder and lightning protection')],
+      anim: b('امواج در همه‌ی جهات؛ شکل‌موج FM در پایین', 'Waves in every direction; FM waveform below')
+    },
+    {
+      id: 'cell', layer: 'access', preset: 'g5',
+      cat: b('رادیویی', 'Radio'),
+      name: b('دکل موبایل (eNodeB / gNodeB)', 'Cell tower (eNodeB / gNodeB)'),
+      desc: b(
+        'هر دکل معمولاً سه سکتور 120 درجه دارد. در 5G آنتن‌های Massive MIMO باریکه‌ی تابش را به سمت گوشی می‌چرخانند (beamforming). واحد باند پایه (BBU) با فیبر به واحد رادیویی بالای دکل وصل است و به هسته از طریق فیبر یا مایکروویو می‌رود.',
+        'A tower usually has three 120° sectors. In 5G, Massive‑MIMO antennas steer a narrow beam at each phone (beamforming). The baseband unit (BBU) feeds the radio at the top over fiber and reaches the core by fiber or microwave.'),
+      specs: [
+        sp('5G NR باند n78', '5G NR band n78', '3300–3800 MHz، TDD، تا 100 MHz در هر حامل', '3300–3800 MHz, TDD, up to 100 MHz per carrier'),
+        sp('LTE باند 3', 'LTE band 3', '1800 MHz، FDD، ‏20 MHz', '1800 MHz, FDD, 20 MHz'),
+        sp('Massive MIMO', 'Massive MIMO', '32T32R یا 64T64R', '32T32R or 64T64R'),
+        sp('سکتورها', 'Sectors', '3 × 120°', '3 × 120°'),
+        sp('فرانت‌هال', 'Fronthaul', 'eCPRI/CPRI روی فیبر', 'eCPRI/CPRI over fiber'),
+        sp('بک‌هال', 'Backhaul', 'فیبر یا مایکروویو، 1 تا 10 Gbps', 'fiber or microwave, 1–10 Gbps')
+      ],
+      models: [b('AAU ‏(آنتن فعال) ‏64T64R', 'AAU (Active Antenna Unit) 64T64R'), b('RRU + آنتن پنلی غیرفعال', 'RRU + passive panel antenna'), b('BBU ‏(واحد باند پایه)', 'BBU (baseband unit)')],
+      anim: b('سه سکتور و باریکه‌ای که گوشی متحرک را دنبال می‌کند', 'Three sectors and a beam that follows a moving phone')
+    },
+    {
+      id: 'microwave', layer: 'transport', preset: 'mw',
+      cat: b('رادیویی', 'Radio'),
+      name: b('لینک مایکروویو نقطه‌به‌نقطه', 'Point‑to‑point microwave link'),
+      desc: b(
+        'جایی که کشیدن فیبر سخت یا گران است، دو دیش با دید مستقیم (LOS) ارتباطی پرظرفیت می‌سازند. ناحیه‌ی فرنل اول باید دست‌کم 60٪ از موانع پاک باشد: r = 8.66·√(d/f) متر (d به km، f به GHz).',
+        'Where fiber is hard or costly, two dishes with line of sight (LOS) form a high‑capacity link. At least 60% of the first Fresnel zone must be clear of obstacles: r = 8.66·√(d/f) meters (d in km, f in GHz).'),
+      specs: [
+        sp('باندها', 'Bands', '6 تا 42 GHz؛ باند E: ‏71–86 GHz', '6–42 GHz; E‑band 71–86 GHz'),
+        sp('ظرفیت', 'Capacity', '1 تا 10 Gbps (مدولاسیون تطبیقی QPSK … 4096QAM)', '1–10 Gbps (adaptive modulation QPSK … 4096QAM)'),
+        sp('طول پرش', 'Hop length', 'حدود 1–2 km (باند E) تا 50 km (باندهای پایین)', '≈ 1–2 km (E‑band) up to 50 km (low bands)'),
+        sp('شعاع فرنل', 'Fresnel radius', '15 GHz و 20 km ← حدود 10 m', '15 GHz, 20 km → ≈ 10 m'),
+        sp('محوشدگی', 'Fading', 'باران و چندمسیری ← مدولاسیون تطبیقی', 'rain & multipath → adaptive modulation'),
+        sp('دیش', 'Dish', '0.3 تا 1.8 m', '0.3 – 1.8 m')
+      ],
+      models: [b('Split‑mount: ‏IDU + ODU با XPIC', 'Split‑mount IDU + ODU with XPIC'), b('ODU باند E ‏(71–76 / 81–86 GHz)', 'E‑band ODU (71–76 / 81–86 GHz)'), b('دکل خرپایی و مهار صاعقه', 'Lattice tower and lightning protection')],
+      anim: b('دید مستقیم و ناحیه‌ی فرنل؛ انتقال دوطرفه', 'Line of sight and Fresnel zone; two‑way transfer')
+    },
+    {
+      id: 'plant', layer: 'power', preset: null,
+      cat: b('تولید برق', 'Generation'),
+      name: b('نیروگاه سیکل ترکیبی', 'Combined-cycle power plant'),
+      desc: b(
+        'گاز طبیعی در کمپرسور و محفظه‌ی احتراق به گاز داغ تبدیل می‌شود و توربین گازی و ژنراتور را می‌چرخاند. گرمای اگزوز در بویلر بازیاب بخار تولید می‌کند و توربین بخار ژنراتور دوم را می‌چرخاند؛ برای همین بازده از توربین گازی ساده بالاتر است. برق ژنراتور با ترانسفورماتور افزاینده به ولتاژ انتقال می‌رسد.',
+        'Natural gas is burned in the combustor; the hot gas spins a gas turbine and generator. Exhaust heat makes steam in a heat-recovery boiler that spins a steam turbine and a second generator — hence higher efficiency than a simple gas turbine. A step-up transformer raises generator voltage to transmission level.'),
+      specs: [
+        sp('فرکانس', 'Frequency', '50 Hz ← ژنراتور دوقطب با 3000 دور بر دقیقه', '50 Hz → a 2-pole generator turns at 3000 rpm'),
+        sp('ولتاژ ترمینال ژنراتور', 'Generator terminal voltage', 'حدود 11 تا 23 kV، سپس افزایش به 230/400 kV', 'about 11–23 kV, then stepped up to 230/400 kV'),
+        sp('بازده', 'Efficiency', 'سیکل ترکیبی ≈ 55–60٪؛ توربین گازی ساده ≈ 35–40٪', 'combined cycle ≈ 55–60%; simple-cycle gas turbine ≈ 35–40%'),
+        sp('سوخت', 'Fuel', 'گاز طبیعی (سوخت جایگزین در برخی واحدها)', 'natural gas (backup fuel at some units)'),
+        sp('ظرفیت نصب‌شده‌ی ایران (2017)', 'Iran installed capacity (2017)', 'گازی 26,200 · بخار 15,829 · سیکل ترکیبی 23,166 · آبی 11,943 · هسته‌ای 1,020 · سایر تجدیدپذیر 333 مگاوات', 'gas 26,200 · steam 15,829 · combined cycle 23,166 · hydro 11,943 · nuclear 1,020 · other renewables 333 MW')
+      ],
+      models: [b('توربین گازی کلاس F/H ‏(چند صد مگاوات)', 'F/H-class gas turbine (hundreds of MW)'), b('بویلر بازیاب گرما (HRSG) و توربین بخار', 'Heat-recovery steam generator (HRSG) and steam turbine'), b('ترانسفورماتور افزاینده + سوئیچ‌یارد', 'Step-up transformer + switchyard')],
+      facts: [{ text: b('داده‌ی ظرفیت مربوط به سال 2017 است (ارائه‌ی کمیته‌ی ملی ایران در CIGRE)؛ اعداد امروز متفاوت‌اند.', 'Capacity data is for 2017 (Iran national committee presentation at CIGRE); today\'s numbers differ.'), src: [6] }],
+      anim: b('گاز ← توربین ← ژنراتور؛ گرمای اگزوز ← بخار ← ژنراتور دوم', 'Gas → turbine → generator; exhaust heat → steam → second generator')
+    },
+    {
+      id: 'hvsub', layer: 'power', preset: null,
+      cat: b('انتقال برق', 'Transmission'),
+      name: b('پست فشار قوی و خطوط انتقال', 'High-voltage substation & transmission lines'),
+      desc: b(
+        'توان ثابت P = √3·V·I·cosφ است؛ با بالا بردن ولتاژ، جریان کم می‌شود و تلفات حرارتی I²R در خط به‌شدت کاهش می‌یابد. پست فشار قوی با ترانسفورماتور، کلید قدرت و حفاظت (رله‌ها) ولتاژ را تبدیل و خطاها را در کسری از ثانیه جدا می‌کند. ماشین‌حساب پایین را با اعداد خودتان امتحان کنید.',
+        'Power is P = √3·V·I·cosφ. Raising voltage lowers current, and the heat loss I²R in the line falls sharply. The substation uses transformers, circuit breakers and protection relays to change voltage and isolate faults in a fraction of a second. Try the calculator below with your own numbers.'),
+      specs: [
+        sp('ولتاژ انتقال در ایران', 'Transmission voltages in Iran', '400 و 230 kV', '400 and 230 kV'),
+        sp('فوق‌توزیع', 'Sub-transmission', '132 · 66 · 63 kV', '132 · 66 · 63 kV'),
+        sp('فرکانس', 'Frequency', '50 Hz', '50 Hz'),
+        sp('تجهیزات اصلی', 'Main equipment', 'ترانسفورماتور قدرت، کلید قدرت (SF₆)، سکسیونر، شینه، رله‌های حفاظتی', 'power transformers, SF₆ circuit breakers, disconnectors, busbars, protection relays'),
+        sp('معیار پایداری', 'Reliability rule', 'N‑1: با از دست رفتن یک المان، شبکه باید سالم بماند', 'N‑1: the grid must survive the loss of any single element')
+      ],
+      models: [b('ترانسفورماتور 400/230 kV و 230/63 kV', '400/230 kV and 230/63 kV transformers'), b('کلید قدرت SF₆ و رله‌های دیستانس/دیفرانسیل', 'SF₆ breakers and distance/differential relays'), b('SCADA و مرکز دیسپچینگ', 'SCADA and dispatch centre')],
+      facts: [{ text: b('سطوح ولتاژ از ارائه‌ی کمیته‌ی ملی ایران در CIGRE (2018): انتقال 400 و 230 kV، فوق‌توزیع 132/66/63 kV، توزیع 33/20/11 kV، مصرف‌کننده‌ی سه‌فاز 380 V.', 'Voltage levels from the Iran national committee presentation at CIGRE (2018): transmission 400 and 230 kV, sub-transmission 132/66/63 kV, distribution 33/20/11 kV, three-phase consumer 380 V.'), src: [6] }],
+      calc: {
+        title: b('ماشین‌حساب تلفات خط', 'Line-loss calculator'),
+        inputs: [
+          { id: 'P', label: b('توان انتقالی', 'Power transferred'), min: 10, max: 1000, step: 10, val: 300, unit: 'MW' },
+          { id: 'V', label: b('ولتاژ خط', 'Line voltage'), min: 20, max: 400, step: 1, val: 400, unit: 'kV' },
+          { id: 'L', label: b('طول خط', 'Line length'), min: 5, max: 500, step: 5, val: 100, unit: 'km' },
+          { id: 'R', label: b('مقاومت هادی', 'Conductor resistance'), min: 0.02, max: 0.2, step: 0.01, val: 0.05, unit: 'Ω/km' }
+        ],
+        outs: [
+          { label: b('جریان هر فاز', 'Current per phase'), fn: (v) => (v.P * 1e6 / (Math.sqrt(3) * v.V * 1e3 * 0.95)).toFixed(0) + ' A' },
+          { label: b('تلفات توان', 'Power loss'), fn: (v) => { const I = v.P * 1e6 / (Math.sqrt(3) * v.V * 1e3 * 0.95); return (3 * I * I * v.R * v.L / 1e6).toFixed(2) + ' MW'; } },
+          { label: b('درصد تلفات', 'Loss share'), fn: (v) => { const I = v.P * 1e6 / (Math.sqrt(3) * v.V * 1e3 * 0.95); return (100 * 3 * I * I * v.R * v.L / 1e6 / v.P).toFixed(1) + ' %'; } }
+        ],
+        note: b('فرض: cosφ = 0.95، سه‌فاز، فقط تلفات مقاومتی (بدون کرونا و راکتانس).', 'Assumes cosφ = 0.95, three-phase, resistive loss only (no corona or reactance).')
+      },
+      anim: b('همان توان: ولتاژ پایین = جریان زیاد = گرم‌شدن؛ ولتاژ بالا = جریان کم', 'Same power: low voltage = big current = heat; high voltage = small current')
+    },
+    {
+      id: 'distsub', layer: 'power', preset: null,
+      cat: b('توزیع برق', 'Distribution'),
+      name: b('پست توزیع و کابل‌های شهری', 'Distribution substation & city cables'),
+      desc: b(
+        'ولتاژ فوق‌توزیع (مثلاً 63 kV) در پست توزیع به ولتاژ میانی (مثلاً 20 kV) می‌رسد و فیدرها آن را در شهر پخش می‌کنند. ترانسفورماتورهای توزیع نزدیک مصرف‌کننده ولتاژ را به 380/220 ولت می‌رسانند. مراکز مخابراتی، دیتاسنترها و سایت‌های دکل معمولاً از همین فیدرها تغذیه می‌شوند و برق پشتیبان دارند.',
+        'Sub-transmission voltage (e.g. 63 kV) is stepped down to medium voltage (e.g. 20 kV) and feeders spread it across the city. Distribution transformers near customers produce 380/220 V. Exchanges, data centers and tower sites are fed from such feeders and keep backup power.'),
+      specs: [
+        sp('ولتاژ توزیع در ایران', 'Distribution voltages in Iran', '33 · 20 · 11 kV', '33 · 20 · 11 kV'),
+        sp('ولتاژ مصرف‌کننده', 'Customer voltage', '380 V سه‌فاز، 220 V تک‌فاز', '380 V three-phase, 220 V single-phase'),
+        sp('آرایش فیدر', 'Feeder layout', 'شعاعی یا حلقوی با نقاط باز (برای انتقال بار هنگام خطا)', 'radial or ring with normally-open points (to re-route during faults)'),
+        sp('حفاظت', 'Protection', 'ریکلوزر، فیوز، رله‌ی اضافه‌جریان', 'reclosers, fuses, over-current relays')
+      ],
+      models: [b('ترانسفورماتور 63/20 kV', '63/20 kV transformer'), b('تابلوی میان‌ولتاژ (RMU/GIS)', 'Medium-voltage switchgear (RMU/GIS)'), b('ترانسفورماتور هوایی/زمینی 20/0.4 kV', 'Pole/pad-mounted 20/0.4 kV transformer')],
+      facts: [],
+      anim: b('پست ← فیدر 20 kV ← ترانسفورماتور محلی ← مصرف‌کننده', 'Substation → 20 kV feeder → local transformer → customers')
+    },
+    {
+      id: 'solar', layer: 'power', preset: null,
+      cat: b('تولید برق', 'Generation'),
+      name: b('نیروگاه خورشیدی و بادی', 'Solar & wind generation'),
+      desc: b(
+        'پنل‌های فتوولتائیک نور را به جریان مستقیم تبدیل می‌کنند و اینورتر آن را به برق متناوب 50 هرتز شبکه برمی‌گرداند. توربین بادی انرژی جنبشی باد را به برق تبدیل می‌کند. تولید این منابع با خورشید و باد تغییر می‌کند؛ شبکه برای جبران آن به نیروگاه‌های قابل کنترل، ذخیره‌ساز یا مدیریت مصرف نیاز دارد.',
+        'Photovoltaic panels turn light into direct current and an inverter converts it to the grid\'s 50 Hz AC. A wind turbine converts the wind\'s kinetic energy. Their output varies with sun and wind, so the grid needs controllable plants, storage or demand management to balance it.'),
+      specs: [
+        sp('تابش مرجع', 'Reference irradiance', '1000 W/m² (شرایط استاندارد STC)', '1000 W/m² (STC)'),
+        sp('بازده پنل', 'Panel efficiency', 'حدود 18 تا 23٪', 'about 18–23%'),
+        sp('ضریب ظرفیت', 'Capacity factor', 'خورشیدی ≈ 20–30٪؛ بادی ≈ 25–40٪ (بسته به محل)', 'solar ≈ 20–30%; wind ≈ 25–40% (site dependent)'),
+        sp('اینورتر', 'Inverter', 'DC ← AC، هم‌گام با شبکه 50 Hz', 'DC → AC, synchronised to the 50 Hz grid'),
+        sp('توان بادی', 'Wind power', 'P = ½·ρ·A·v³·Cp (Cp حداکثر 0.593)', 'P = ½·ρ·A·v³·Cp (Cp at most 0.593)')
+      ],
+      models: [b('ماژول مونوکریستال/پرک', 'Mono PERC / TOPCon modules'), b('اینورتر رشته‌ای یا مرکزی', 'String or central inverter'), b('توربین بادی افقی‌محور سه‌پره', 'Three-blade horizontal-axis wind turbine')],
+      facts: [],
+      anim: b('منحنی روزانه‌ی تولید خورشیدی و چرخش توربین', 'Daily solar curve and a spinning wind turbine')
+    },
+    {
+      id: 'sitepower', layer: 'power', preset: null,
+      cat: b('برق مخابرات', 'Telecom power'),
+      name: b('برق پشتیبان سایت مخابراتی', 'Telecom site backup power'),
+      desc: b(
+        'تجهیزات مخابراتی با برق مستقیم 48 ولت کار می‌کنند. رکتیفایر برق شهر را به 48 ولت تبدیل می‌کند و باتری‌ها را شارژ نگه می‌دارد. هنگام قطع برق، باتری بدون هیچ وقفه بار را می‌گیرد و اگر قطعی طولانی شود دیزل‌ژنراتور روشن می‌شود. اگر باتری و سوخت تمام شوند، سایت خاموش می‌شود. ماشین‌حساب زمان دوام باتری را نشان می‌دهد.',
+        'Telecom equipment runs on 48 V DC. A rectifier converts mains to 48 V and keeps batteries charged. In an outage the batteries take over with no break, and a diesel generator starts if it lasts. If batteries and fuel run out, the site goes dark. The calculator shows battery autonomy.'),
+      specs: [
+        sp('ولتاژ DC', 'DC bus', '‑48 V (ایمن‌تر و بدون مبدل اضافه برای تجهیزات)', '−48 V (safe and converter-free for telecom gear)'),
+        sp('باتری', 'Batteries', 'سرب‑اسید VRLA یا لیتیوم‌یون؛ دوام معمول چند ساعت', 'VRLA lead-acid or lithium-ion; typical autonomy a few hours'),
+        sp('ژنراتور', 'Generator', 'دیزلی با کلید انتقال خودکار (ATS)', 'diesel with automatic transfer switch (ATS)'),
+        sp('افزونگی', 'Redundancy', 'ماژول‌های رکتیفایر N+1', 'N+1 rectifier modules'),
+        sp('هم‌افزایی', 'Hybrid', 'پنل خورشیدی می‌تواند مصرف سوخت را کم کند', 'solar panels can reduce fuel use')
+      ],
+      models: [b('رکتیفایر ماژولار 48 V، 3 تا 6 kW', 'Modular 48 V rectifier, 3–6 kW'), b('بانک باتری VRLA/Li‑ion', 'VRLA/Li‑ion battery bank'), b('دیزل‌ژنراتور + ATS', 'Diesel generator + ATS')],
+      facts: [{ text: b('مدیر مخابرات منطقه‌ی تهران هزینه‌ی ماهانه‌ی برق شبکه را نزدیک به 60 میلیارد تومان اعلام کرده (مرداد 1405). این نقل‌قول رسانه‌ای است و لزوماً هزینه‌ی کل صنعت یا همه‌ی اپراتورها نیست.', 'The Tehran regional telecom manager stated monthly network electricity cost near 60 billion toman (Aug 2026). A media quote; not necessarily the whole industry or all operators.'), src: [1] }],
+      calc: {
+        title: b('ماشین‌حساب دوام باتری', 'Battery autonomy calculator'),
+        inputs: [
+          { id: 'W', label: b('بار سایت', 'Site load'), min: 0.5, max: 20, step: 0.5, val: 4, unit: 'kW' },
+          { id: 'E', label: b('ظرفیت باتری', 'Battery capacity'), min: 2, max: 200, step: 1, val: 40, unit: 'kWh' },
+          { id: 'D', label: b('عمق تخلیه‌ی مجاز', 'Allowed depth of discharge'), min: 50, max: 90, step: 5, val: 80, unit: '%' }
+        ],
+        outs: [
+          { label: b('دوام بدون برق', 'Autonomy without mains'), fn: (v) => (v.E * v.D / 100 / v.W).toFixed(1) + ' h' },
+          { label: b('انرژی روزانه', 'Daily energy'), fn: (v) => (v.W * 24).toFixed(0) + ' kWh' }
+        ],
+        note: b('محاسبه‌ی ساده: ظرفیت قابل‌استفاده ÷ بار؛ پیری باتری و دما دوام واقعی را کمتر می‌کنند.', 'Simple estimate: usable capacity ÷ load; ageing and temperature shorten real autonomy.')
+      },
+      anim: b('قطع برق: باتری، سپس دیزل‌ژنراتور، سپس بازگشت برق شهر', 'Mains outage: battery, then generator, then mains return')
+    }
+  ];
+
+  window.TRACE = [
+    { unit: 'user',       text: b('لپ‌تاپ بسته را با Wi‑Fi به ONT می‌دهد و ONT آن را به نور تبدیل می‌کند', 'The laptop hands the packet to the ONT over Wi‑Fi; the ONT turns it into light') },
+    { unit: 'cabinet',    text: b('بسته در بازه‌ی زمانی خودش (TDMA) از تقسیم‌کننده‌ی کافو می‌گذرد', 'The packet passes the cabinet splitter in its own TDMA time slot') },
+    { unit: 'exchange',   text: b('OLT در مرکز مخابرات بسته‌ها را جمع و به شبکه‌ی انتقال می‌دهد', 'The OLT in the exchange aggregates packets and hands them to the transport network') },
+    { unit: 'fiber',      text: b('حلقه‌ی DWDM آن را روی یک طول‌موج رنگی به سمت دیتاسنتر می‌برد', 'The DWDM ring carries it on one wavelength toward the data center') },
+    { unit: 'datacenter', text: b('سوئیچ‌های Leaf‑Spine بسته را به سرور یا مسیر خروجی می‌رسانند', 'Leaf‑Spine switches deliver it to a server or the exit path') },
+    { unit: 'ixp',        text: b('روتر BGP مسیر مقصد را برمی‌گزیند؛ مقصد خارجی از دروازه می‌رود', 'The BGP router picks the route; foreign destinations leave via the gateway') },
+    { unit: 'satellite',  text: b('دیش بسته را به ماهواره‌ی زمین‌آهنگ می‌فرستد (حدود 120 ms یک‌طرفه)', 'The dish beams it to a GEO satellite (≈ 120 ms one way)') }
+  ];
+
+  window.TRACE_POWER = [
+    { unit: 'plant',      text: b('گاز در نیروگاه می‌سوزد، ژنراتور 50 هرتز تولید می‌کند و ترانسفورماتور ولتاژ را بالا می‌برد', 'Gas burns in the plant, the generator makes 50 Hz power and a transformer raises the voltage') },
+    { unit: 'hvsub',      text: b('خط انتقال 400/230 kV توان را با جریان کم و تلفات کم به پست فشار قوی می‌رساند', 'The 400/230 kV line carries the power at low current and low loss to the HV substation') },
+    { unit: 'distsub',    text: b('پست توزیع ولتاژ را پایین می‌آورد و فیدرهای شهری آن را پخش می‌کنند', 'The distribution substation steps the voltage down and city feeders spread it') },
+    { unit: 'exchange',   text: b('برق به مرکز مخابرات می‌رسد؛ رکتیفایر آن را 48 ولت می‌کند و باتری آماده است', 'Power reaches the exchange; rectifiers make 48 V and batteries stand by') },
+    { unit: 'datacenter', text: b('دیتاسنتر برق را از UPS و ژنراتور هم دارد تا سرورها هیچ‌گاه قطع نشوند', 'The data center also has UPS and generators so servers never drop') }
+  ];
+
+  // Content derived from the uploaded report «گزارش سیستم مخابراتی تهران» (4 Nov 2026) + sources marked "added".
+  window.REPORT = {
+    title: b('گزارش و منابع', 'Report & sources'),
+    intro: b(
+      'این بخش از «گزارش پژوهشی: ساختار عمومی سیستم مخابراتی شهر تهران» (4 نوامبر 2026) ساخته شده است. گزارش عمداً نقشه‌ی عملیاتی، مسیر دقیق کابل یا محل تجهیزات حساس را ارائه نمی‌دهد؛ این شهر هم نمادین است و نقشه‌ی واقعی نیست.',
+      'This section is built from the research report “General structure of Tehran\'s telecom system” (4 Nov 2026). The report deliberately gives no operational maps, exact cable routes or sensitive equipment locations; this city is symbolic, not a real map.'),
+    layers: [
+      { id: 'access', name: b('لایه‌ی دسترسی', 'Access layer'), text: b('اتصال خانه، اداره یا گوشی به شبکه با زوج‌سیم مسی، فیبر یا امواج رادیویی.', 'Connects a home, office or phone to the network over copper pair, fiber or radio.'), units: ['user', 'cell'] },
+      { id: 'aggregation', name: b('لایه‌ی تجمیع', 'Aggregation layer'), text: b('جمع‌کردن ترافیک مشترکان در نقاط تجمیع شهری و آماده‌سازی برای انتقال.', 'Collects subscribers\' traffic at city aggregation points and prepares it for transport.'), units: ['cabinet', 'exchange'] },
+      { id: 'transport', name: b('لایه‌ی انتقال', 'Transport layer'), text: b('جابه‌جایی حجم بالای صدا و داده میان بخش‌های شهر و مراکز شبکه؛ فیبر یکی از رسانه‌های اصلی است.', 'Moves large volumes of voice and data between city areas and network centers; fiber is a main medium.'), units: ['fiber', 'microwave'] },
+      { id: 'core', name: b('هسته و کنترل', 'Core & control'), text: b('مسیریابی داده، مدیریت نشست، کنترل تماس، احراز هویت و اتصال شبکه‌ها به هم.', 'Routing, session management, call control, authentication and interconnection.'), units: ['datacenter'] },
+      { id: 'external', name: b('خدمات و اتصال بیرونی', 'Services & external connectivity'), text: b('اینترنت، مراکز داده، خدمات سازمانی، تماس بین‌شهری/بین‌المللی و ارتباط با سایر اپراتورها.', 'Internet, data centers, enterprise services, long-distance/international calls and links to other operators.'), units: ['ixp', 'satellite'] },
+      { id: 'power', name: b('برق و تاب‌آوری (بخش 6 گزارش)', 'Power & resilience (report §6)'), text: b('مراکز مخابراتی به برق پایدار، برق اضطراری، سرمایش و پایش نیاز دارند؛ قطع برق می‌تواند ظرفیت یا پایداری سرویس را کم کند.', 'Telecom sites need stable power, backup power, cooling and monitoring; an outage can reduce capacity or stability.'), units: ['plant', 'hvsub', 'distsub', 'solar', 'sitepower'] }
+    ],
+    facts: [
+      { text: b('حدود 6 میلیون و 375 هزار مشترک فعال تلفن ثابت در شهر تهران.', 'About 6.375 million active fixed-line subscribers in Tehran city.'), src: [1], note: b('اظهار مدیر مخابرات منطقه‌ی تهران، مرداد 1405', 'Statement by Tehran regional telecom manager, Aug 2026') },
+      { text: b('حدود 225 هزار مشترک فعال FTTH؛ نفوذ FTTH ≈ 5.7٪ و xDSL ≈ 24٪.', 'About 225,000 active FTTH subscribers; FTTH penetration ≈ 5.7% and xDSL ≈ 24%.'), src: [1], note: b('تعریف مخرج نفوذ مشخص نیست؛ 225 هزار ÷ 6.375 میلیون ≈ 3.5٪ است.', 'Denominator undefined; 225k ÷ 6.375M ≈ 3.5%.') },
+      { text: b('طول فیبر نوری استان تهران: 16٬400 کیلومتر.', 'Fiber length, Tehran province: 16,400 km.'), src: [2], note: b('استان است نه شهر؛ خرداد 1405', 'Province, not city; Jun 2026') },
+      { text: b('هزینه‌ی ماهانه‌ی برق شبکه نزدیک به 60 میلیارد تومان.', 'Monthly network electricity cost near 60 billion toman.'), src: [1], note: b('نقل‌قول رسانه‌ای؛ لزوماً کل صنعت نیست', 'Media quote; not necessarily the whole industry') }
+    ],
+    actors: [
+      { name: b('شرکت مخابرات ایران / مخابرات منطقه‌ی تهران', 'Telecommunication Company of Iran / Tehran region'), text: b('تلفن ثابت، بخشی از دسترسی ثابت، DSL و توسعه‌ی فیبر.', 'Fixed telephony, part of fixed access, DSL and fiber rollout.') },
+      { name: b('اپراتورهای سیار (همراه اول، ایرانسل، رایتل)', 'Mobile operators (MCI, Irancell, RighTel)'), text: b('خدمات موبایل و مدیریت شبکه‌ی رادیویی و هسته‌ی اختصاصی.', 'Mobile services; own radio access and core networks.') },
+      { name: b('شرکت ارتباطات زیرساخت', 'Infrastructure Communications Company'), text: b('شبکه‌ی مادر مخابراتی و بخشی از انتقال و ارتباطات بین‌الملل.', 'National backbone and part of transport and international links.') },
+      { name: b('سازمان تنظیم مقررات و ارتباطات رادیویی', 'Communications Regulatory Authority'), text: b('پروانه، تنظیم‌گری، نظارت بر بازار و چارچوب‌های فنی/رقابتی.', 'Licensing, regulation, market oversight and technical/competition frameworks.') },
+      { name: b('شهرداری و دستگاه‌های خدمات شهری', 'Municipality & city services'), text: b('هماهنگی حفاری، مجوزها، کانال‌ها و تداخل پروژه‌های عمرانی با زیرساخت.', 'Coordinating excavation, permits, ducts and conflicts with construction works.') }
+    ],
+    kpis: [
+      b('پوشش جغرافیایی و درصد ساختمان‌های قابل سرویس‌گیری فیبر', 'Geographic coverage and share of buildings that can get fiber'),
+      b('سرعت واقعی دانلود/آپلود، تأخیر، نوسان تأخیر و ازدست‌رفتن بسته', 'Real download/upload speed, latency, jitter and packet loss'),
+      b('دردسترس‌بودن سرویس و میانگین زمان رفع خرابی', 'Service availability and mean time to repair'),
+      b('تراکم و ازدحام در ساعات اوج', 'Congestion at peak hours'),
+      b('تعداد مسیرهای جایگزین و زمان بازیابی پس از حادثه', 'Number of alternate paths and recovery time after an incident'),
+      b('کیفیت پوشش داخل ساختمان و تفاوت محله‌ها', 'Indoor coverage quality and differences between neighbourhoods')
+    ],
+    sources: [
+      { n: 1, t: b('تسنیم، «مخابرات: شهرداری تهران در پروژه فیبر نوری به‌دنبال بیزینس است»، 25 مرداد 1405', 'Tasnim, “Telecom: Tehran municipality seeks business in the fiber project”, 16 Aug 2026'), url: 'https://www.tasnimnews.ir/fa/news/1405/05/25/3672184/', rep: true },
+      { n: 2, t: b('تسنیم، «2 همت خسارت به شبکه ارتباطی تهران وارد شد»، 2 خرداد 1405', 'Tasnim, “2 hemmat damage to Tehran\'s communication network”, 23 May 2026'), url: 'https://www.tasnimnews.ir/fa/news/1405/03/02/3598403/', rep: true },
+      { n: 3, t: b('کمیسیون تنظیم مقررات ارتباطات، مصوبه‌ی 1 جلسه‌ی 336', 'Communications Regulation Commission, resolution 1 of session 336'), url: 'https://naderjafari.com/resolutions/cra/1401/336-1', rep: true },
+      { n: 4, t: b('JICA، گزارش مدیریت ریسک زلزله‌ی تهران (زمینه‌ی تاریخی)', 'JICA, Tehran earthquake risk management report (historical context)'), url: 'https://openjicareport.jica.go.jp/pdf/12252748_01.pdf', rep: true },
+      { n: 5, t: b('Article 19، گزارش ساختار فنی اتصال اینترنت در ایران', 'Article 19, report on the technical structure of Iran\'s internet connectivity'), url: 'https://www.article19.org/wp-content/uploads/2020/10/Iran-Internet-Report-Farsi-3.pdf', rep: true },
+      { n: 6, t: b('(افزوده‌شده) CIGRE، ارائه‌ی کمیته‌ی ملی ایران درباره‌ی سیستم قدرت، 2018', '(added) CIGRE, Iran national committee presentation on the power system, 2018'), url: 'https://www.cigre.org/userfiles/files/Community/NC/2018_National-power-system_Iran.pdf', rep: false }
+    ],
+    limits: b(
+      'محدودیت‌ها: گزارش بر منابع عمومی و اظهارات منتشرشده تکیه دارد؛ آمارها ممکن است به شهر یا استان اشاره کنند و تاریخ انتشار مهم است. برای طراحی مهندسی یا ارزیابی میدانی باید داده‌ی رسمی و به‌روز از اپراتورها و نهادهای مسئول گرفته شود.',
+      'Limitations: the report relies on public sources and published statements; figures may refer to the city or the province, and publication date matters. For engineering design or field assessment, obtain official, current data from operators and responsible bodies.')
+  };
+})();
+
+  </script>
+  <script>
+/* radio-core.js — pure signal-processing & link-budget math (no DOM).
+ *
+ * Model summary
+ *  - Link budget:  Pr = Pt + Gt + Gr − FSPL − extra ;  N = −174 dBm/Hz + 10·log10(B) + NF ;  SNR = Pr − N
+ *  - FSPL (dB)  =  32.44 + 20·log10(d_km) + 20·log10(f_MHz)
+ *  - Digital: symbol rate Rs = B (ideal Nyquist), so Es/N0 = SNR and Eb/N0 = SNR / bits-per-symbol.
+ *  - Symbols are Gray-mapped (BPSK, QPSK, 16-QAM), unit average symbol energy, AWGN (+ optional
+ *    flat Rayleigh fading with perfect channel knowledge). BER is both computed (theory) and measured (Monte-Carlo).
+ *  - Scope/spectrum use a passband waveform at a scaled carrier (1/16 of the sample rate); the frequency
+ *    axis in the UI is rescaled to real MHz from the chosen bandwidth.
+ */
+(function (root) {
+  'use strict';
+  const TAU = 2 * Math.PI;
+  const log10 = (x) => Math.log(x) / Math.LN10;
+
+  // Complementary error function (Numerical Recipes erfcc, |err| < 1.2e-7 relative)
+  function erfc(x) {
+    const z = Math.abs(x), t = 1 / (1 + 0.5 * z);
+    const r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 +
+      t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 +
+      t * (-0.82215223 + t * 0.17087277)))))))));
+    return x >= 0 ? r : 2 - r;
+  }
+
+  const SYM_LEN = 64;      // samples per symbol (digital)
+  const CAR_PER = 16;      // samples per carrier cycle
+  const NS = 4096;         // samples in one capture
+  const MODS = {
+    BPSK:  { digital: true,  bps: 1 },
+    QPSK:  { digital: true,  bps: 2 },
+    QAM16: { digital: true,  bps: 4 },
+    AM:    { digital: false, bFactor: 64 },   // simulated RF bandwidth = fs / bFactor
+    FM:    { digital: false, bFactor: 25 }
+  };
+  const FM_DEV = 0.012;    // peak deviation, cycles/sample
+  const AM_INDEX = 0.7;
+
+  const dbToLin = (db) => Math.pow(10, db / 10);
+  const linToDb = (x) => 10 * log10(x);
+
+  function fspl(dKm, fMHz) { return 32.44 + 20 * log10(dKm) + 20 * log10(fMHz); }
+  function noiseDbm(bMHz, nfDb) { return -174 + 10 * log10(bMHz * 1e6) + nfDb; }
+  function linkBudget(p) {
+    const loss = fspl(p.dKm, p.fMHz);
+    const prx = p.ptDbm + p.gtDbi + p.grDbi - loss - p.extraDb;
+    const noise = noiseDbm(p.bMHz, p.nfDb);
+    return { fspl: loss, prx: prx, noise: noise, snr: prx - noise };
+  }
+
+  // ---------- theory ----------
+  function berAwgn(mod, ebn0) {
+    if (mod === 'BPSK' || mod === 'QPSK') return 0.5 * erfc(Math.sqrt(ebn0));
+    if (mod === 'QAM16') return 0.375 * erfc(Math.sqrt(0.4 * ebn0));
+    return NaN;
+  }
+  // flat Rayleigh: average the AWGN BER over an exponential SNR distribution
+  function berRayleigh(mod, ebn0Mean) {
+    let sum = 0; const dx = 0.02, xmax = 40;
+    for (let x = dx / 2; x < xmax; x += dx) sum += berAwgn(mod, ebn0Mean * x) * Math.exp(-x) * dx;
+    return sum;
+  }
+  function berTheory(mod, ebn0, fading) { return fading ? berRayleigh(mod, ebn0) : berAwgn(mod, ebn0); }
+
+  // ---------- randomness ----------
+  function gauss() {
+    let u = 0; while (u === 0) u = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * Math.random());
+  }
+  function prbs(n, seed) {              // x^15 + x^14 + 1
+    const out = new Uint8Array(n); let s = (seed || 0x1ACE) & 0x7FFF; if (!s) s = 1;
+    for (let i = 0; i < n; i++) { const b = ((s >> 14) ^ (s >> 13)) & 1; s = ((s << 1) | b) & 0x7FFF; out[i] = b; }
+    return out;
+  }
+
+  // ---------- text <-> bits ----------
+  function textToBits(str, maxBytes) {
+    const enc = new TextEncoder(); let s = '';
+    for (const ch of str) { if (enc.encode(s + ch).length > maxBytes) break; s += ch; }
+    const bytes = enc.encode(s), bits = new Uint8Array(bytes.length * 8);
+    for (let i = 0; i < bytes.length; i++) for (let j = 0; j < 8; j++) bits[i * 8 + j] = (bytes[i] >> (7 - j)) & 1;
+    return { bits: bits, nBytes: bytes.length, text: s };
+  }
+  function bitsToText(bits, nBytes) {
+    const bytes = new Uint8Array(nBytes);
+    for (let i = 0; i < nBytes; i++) { let v = 0; for (let j = 0; j < 8; j++) v = (v << 1) | bits[i * 8 + j]; bytes[i] = v; }
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+
+  // ---------- constellation mapping ----------
+  const G2 = [-3, -1, 3, 1];            // Gray: 00→−3, 01→−1, 11→+1, 10→+3  (index = hi*2+lo)
+  const S10 = 1 / Math.sqrt(10);
+  function buildBits(mod, msgBits, nSym) {
+    const bps = MODS[mod].bps, total = nSym * bps, bits = prbs(total, 0x2B5C);
+    for (let i = 0; i < Math.min(msgBits.length, total); i++) bits[i] = msgBits[i];
+    return bits;
+  }
+  function mapSymbols(mod, bits, n) {
+    const bps = MODS[mod].bps, I = new Float64Array(n), Q = new Float64Array(n);
+    for (let k = 0; k < n; k++) {
+      const b = k * bps;
+      if (mod === 'BPSK') { I[k] = 1 - 2 * bits[b]; }
+      else if (mod === 'QPSK') { I[k] = (1 - 2 * bits[b]) * Math.SQRT1_2; Q[k] = (1 - 2 * bits[b + 1]) * Math.SQRT1_2; }
+      else { I[k] = G2[bits[b] * 2 + bits[b + 1]] * S10; Q[k] = G2[bits[b + 2] * 2 + bits[b + 3]] * S10; }
+    }
+    return { I: I, Q: Q };
+  }
+  function axisBits(v) {                 // 16-QAM hard decision on one axis → index into G2
+    const u = v * Math.sqrt(10);
+    return u < -2 ? 0 : u < 0 ? 1 : u < 2 ? 3 : 2;
+  }
+  function demapSymbols(mod, yi, yq, n, out) {
+    const bps = MODS[mod].bps;
+    for (let k = 0; k < n; k++) {
+      const b = k * bps;
+      if (mod === 'BPSK') out[b] = yi[k] < 0 ? 1 : 0;
+      else if (mod === 'QPSK') { out[b] = yi[k] < 0 ? 1 : 0; out[b + 1] = yq[k] < 0 ? 1 : 0; }
+      else { const a = axisBits(yi[k]), c = axisBits(yq[k]); out[b] = a >> 1; out[b + 1] = a & 1; out[b + 2] = c >> 1; out[b + 3] = c & 1; }
+    }
+    return out;
+  }
+
+  // Symbol-domain Monte-Carlo channel. Es = 1 ; per-dimension noise variance = 1/(2·Es/N0).
+  function simulateSymbols(mod, I, Q, n, esn0, fading) {
+    const sig = Math.sqrt(1 / (2 * esn0)), yi = new Float64Array(n), yq = new Float64Array(n);
+    for (let k = 0; k < n; k++) {
+      const ni = gauss() * sig, nq = gauss() * sig;
+      if (fading) {
+        const hi = gauss() * Math.SQRT1_2, hq = gauss() * Math.SQRT1_2;
+        const ri = hi * I[k] - hq * Q[k] + ni, rq = hi * Q[k] + hq * I[k] + nq;
+        const m = Math.max(hi * hi + hq * hq, 1e-9);
+        yi[k] = (ri * hi + rq * hq) / m; yq[k] = (rq * hi - ri * hq) / m;
+      } else { yi[k] = I[k] + ni; yq[k] = Q[k] + nq; }
+    }
+    return { yi: yi, yq: yq };
+  }
+  function countErrors(a, b, n) { let e = 0; for (let i = 0; i < n; i++) if (a[i] !== b[i]) e++; return e; }
+
+  // ---------- FFT ----------
+  function fft(re, im) {
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+      if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = -TAU / len, wr = Math.cos(ang), wi = Math.sin(ang), h = len >> 1;
+      for (let i = 0; i < n; i += len) {
+        let cr = 1, ci = 0;
+        for (let j = 0; j < h; j++) {
+          const a = i + j, b = a + h;
+          const vr = re[b] * cr - im[b] * ci, vi = re[b] * ci + im[b] * cr;
+          re[b] = re[a] - vr; im[b] = im[a] - vi; re[a] += vr; im[a] += vi;
+          const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t;
+        }
+      }
+    }
+  }
+  function spectrumDb(x) {               // Hann window, returns dB for bins 0..n/2
+    const n = x.length, re = new Float64Array(n), im = new Float64Array(n);
+    for (let i = 0; i < n; i++) re[i] = x[i] * (0.5 - 0.5 * Math.cos(TAU * i / (n - 1)));
+    fft(re, im);
+    const out = new Float32Array(n / 2);
+    for (let k = 0; k < n / 2; k++) out[k] = 10 * log10((re[k] * re[k] + im[k] * im[k]) / (n * n) + 1e-14);
+    return out;
+  }
+
+  // ---------- passband captures ----------
+  function prefix(arr) { const p = new Float64Array(arr.length + 1); for (let i = 0; i < arr.length; i++) p[i + 1] = p[i] + arr[i]; return p; }
+  function movingAvgCentered(arr, M) {   // window [n−M/2, n+M/2), edges use available samples
+    const p = prefix(arr), n = arr.length, out = new Float64Array(n), h = M >> 1;
+    for (let i = 0; i < n; i++) { const lo = Math.max(0, i - h), hi = Math.min(n, i + h); out[i] = (p[hi] - p[lo]) / M; }
+    return out;
+  }
+
+  // Digital capture: nSym symbols, rectangular pulses, carrier at 1/16 fs.
+  function digitalCapture(sym, nSym, esn0, fading) {
+    const L = SYM_LEN, n = nSym * L;
+    const tx = new Float32Array(n), rx = new Float32Array(n);
+    const sigma = Math.sqrt(L / (4 * esn0));     // in-band SNR = Es/N0 (see header)
+    const cx = new Float64Array(n), sx = new Float64Array(n);
+    for (let k = 0; k < nSym; k++) {
+      let hi = 1, hq = 0;
+      if (fading) { hi = gauss() * Math.SQRT1_2; hq = gauss() * Math.SQRT1_2; }
+      const I = sym.I[k], Q = sym.Q[k], ri = hi * I - hq * Q, rq = hi * Q + hq * I;
+      for (let m = 0; m < L; m++) {
+        const i = k * L + m, ph = TAU * i / CAR_PER, c = Math.cos(ph), s = Math.sin(ph);
+        tx[i] = I * c - Q * s;
+        rx[i] = ri * c - rq * s + sigma * gauss();
+        cx[i] = rx[i] * c; sx[i] = -rx[i] * s;
+      }
+    }
+    const demI = movingAvgCentered(cx, L), demQ = movingAvgCentered(sx, L);
+    for (let i = 0; i < n; i++) { demI[i] *= 2; demQ[i] *= 2; }
+    return { tx: tx, rx: rx, demI: demI, demQ: demQ, L: L };
+  }
+
+  const MSG = (n) => 0.6 * Math.sin(TAU * n / 256) + 0.4 * Math.sin(TAU * n / 128 + 0.5);
+
+  function jakes(n, rand) {              // slow Rayleigh amplitude envelope, E[a²]=1
+    const a = new Float32Array(n), K = 8, fd = 1 / 1200, ph = [], al = [];
+    for (let k = 0; k < K; k++) { ph.push(Math.random() * TAU); al.push(Math.random() * TAU); }
+    for (let i = 0; i < n; i++) {
+      let I = 0, Qc = 0;
+      for (let k = 0; k < K; k++) { const w = TAU * fd * Math.cos(al[k]) * i + ph[k]; I += Math.cos(w); Qc += Math.sin(w); }
+      a[i] = Math.sqrt((I * I + Qc * Qc) / K);
+    }
+    return a;
+  }
+
+  // Analog capture (AM or FM) of the 2-tone test message.
+  function analogCapture(mod, snrDb, fading, n) {
+    n = n || NS;
+    const x = new Float32Array(n), tx = new Float32Array(n), rx = new Float32Array(n);
+    let phi = 0, pw = 0;
+    for (let i = 0; i < n; i++) {
+      x[i] = MSG(i);
+      if (mod === 'AM') tx[i] = (1 + AM_INDEX * x[i]) * Math.cos(TAU * i / CAR_PER);
+      else { phi += TAU * FM_DEV * x[i]; tx[i] = Math.cos(TAU * i / CAR_PER + phi); }
+      pw += tx[i] * tx[i];
+    }
+    pw /= n;
+    const snr = dbToLin(snrDb), bf = MODS[mod].bFactor;
+    const sigma = Math.sqrt(pw / snr * (bf / 2));  // noise power over fs/2 such that in-band SNR = snr
+    const amp = fading ? jakes(n) : null;
+    const ci = new Float64Array(n), cq = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      rx[i] = (amp ? amp[i] : 1) * tx[i] + sigma * gauss();
+      const ph = TAU * i / CAR_PER;
+      ci[i] = 2 * rx[i] * Math.cos(ph); cq[i] = -2 * rx[i] * Math.sin(ph);
+    }
+    // two cascaded 16-tap averagers: nulls at 2·fc and keeps leakage low enough to differentiate the phase (FM)
+    const bi = movingAvgCentered(movingAvgCentered(ci, 16), 16), bq = movingAvgCentered(movingAvgCentered(cq, 16), 16);
+    const est = new Float32Array(n);
+    if (mod === 'AM') {
+      let mean = 0; for (let i = 0; i < n; i++) { est[i] = Math.hypot(bi[i], bq[i]); mean += est[i]; }
+      mean /= n; for (let i = 0; i < n; i++) est[i] = (est[i] - mean) / AM_INDEX;
+    } else {
+      let prev = Math.atan2(bq[0], bi[0]);
+      for (let i = 1; i < n; i++) {
+        const p = Math.atan2(bq[i], bi[i]); let d = p - prev;
+        while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU;
+        est[i] = d / (TAU * FM_DEV); prev = p;
+      }
+    }
+    return { x: x, tx: tx, rx: rx, est: est, snrOutDb: outputSnr(x, est, 80, n - 80), L: 16 };
+  }
+
+  // Least-squares gain/offset fit of est ≈ a·x + b; SNR of the fitted signal vs. residual.
+  function outputSnr(x, est, lo, hi) {
+    let sx = 0, sy = 0, sxx = 0, sxy = 0, m = hi - lo;
+    for (let i = lo; i < hi; i++) { sx += x[i]; sy += est[i]; sxx += x[i] * x[i]; sxy += x[i] * est[i]; }
+    const a = (m * sxy - sx * sy) / (m * sxx - sx * sx), b = (sy - a * sx) / m;
+    let ps = 0, pn = 0;
+    for (let i = lo; i < hi; i++) { const f = a * x[i] + b, r = est[i] - f; ps += (f - b) * (f - b); pn += r * r; }
+    return 10 * log10(ps / Math.max(pn, 1e-12));
+  }
+
+  root.RadioCore = {
+    MODS: MODS, SYM_LEN: SYM_LEN, CAR_PER: CAR_PER, NS: NS, FM_DEV: FM_DEV, AM_INDEX: AM_INDEX,
+    erfc: erfc, fspl: fspl, noiseDbm: noiseDbm, linkBudget: linkBudget, dbToLin: dbToLin, linToDb: linToDb,
+    berAwgn: berAwgn, berRayleigh: berRayleigh, berTheory: berTheory,
+    textToBits: textToBits, bitsToText: bitsToText, buildBits: buildBits,
+    mapSymbols: mapSymbols, demapSymbols: demapSymbols, simulateSymbols: simulateSymbols, countErrors: countErrors,
+    spectrumDb: spectrumDb, digitalCapture: digitalCapture, analogCapture: analogCapture, MSG: MSG, gauss: gauss
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = root.RadioCore;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+  </script>
+  <script>
+/* anim.js — small live canvas diagrams that explain how each unit works.
+ * UnitAnim.start(canvas, unitId) / UnitAnim.stop(). Labels follow the current UI language. */
+(function () {
+  'use strict';
+  const TAU = Math.PI * 2;
+  const C = { bg: '#F3EEE2', grid: '#E3DBC8', ink: '#16223B', ink2: '#5B6A86', teal: '#14909F', orange: '#E8602C', yellow: '#F2B84B',
+    blue: '#5A7DB0', navy: '#2F4670', white: '#FBF8F1', steel: '#8E9BAE', green: '#6AA45E', violet: '#7A5CE0' };
+  const W = 480, H = 270;
+  let raf = 0, cv = null, ctx = null, running = null, t0 = 0;
+
+  const L = (fa, en) => (window.I18N && I18N.lang === 'fa') ? fa : en;
+  const lerp = (a, b, u) => a + (b - a) * u;
+  const frac = (x) => x - Math.floor(x);
+
+  function bg(c) {
+    c.fillStyle = C.bg; c.fillRect(0, 0, W, H);
+    c.strokeStyle = C.grid; c.lineWidth = 1; c.beginPath();
+    for (let x = 0; x <= W; x += 30) { c.moveTo(x, 0); c.lineTo(x, H); }
+    for (let y = 0; y <= H; y += 30) { c.moveTo(0, y); c.lineTo(W, y); }
+    c.stroke();
+  }
+  function text(c, s, x, y, color, size, align, weight) {
+    c.fillStyle = color || C.ink; c.font = (weight || 600) + ' ' + (size || 13) + 'px Vazirmatn, system-ui, sans-serif';
+    c.textAlign = align || 'center'; c.textBaseline = 'middle';
+    const r = window.I18N ? I18N.cv(s) : { s: s, dir: 'ltr' }; c.direction = r.dir; c.fillText(r.s, x, y);
+  }
+  function line(c, pts, color, w, dash) {
+    c.strokeStyle = color; c.lineWidth = w || 2; c.setLineDash(dash || []); c.beginPath();
+    pts.forEach((p, i) => (i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]))); c.stroke(); c.setLineDash([]);
+  }
+  function dot(c, x, y, r, color) { c.fillStyle = color; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); }
+  function rect(c, x, y, w, h, fill, stroke, r) {
+    c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r === undefined ? 4 : r); else c.rect(x, y, w, h);
+    if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.strokeStyle = stroke; c.lineWidth = 1.5; c.stroke(); }
+  }
+  function along(pts, u) {
+    let total = 0; const seg = [];
+    for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(d); total += d; }
+    let d = frac(u) * total;
+    for (let i = 0; i < seg.length; i++) { if (d <= seg[i]) return [lerp(pts[i][0], pts[i + 1][0], d / seg[i]), lerp(pts[i][1], pts[i + 1][1], d / seg[i])]; d -= seg[i]; }
+    return pts[pts.length - 1];
+  }
+  function flow(c, pts, t, n, color, r, speed) {
+    for (let i = 0; i < n; i++) { const p = along(pts, t * (speed || 0.3) + i / n); dot(c, p[0], p[1], r || 3.5, color); }
+  }
+  function laptop(c, x, y, s) {
+    rect(c, x - 26 * s, y - 36 * s, 52 * s, 34 * s, C.navy, null, 3); rect(c, x - 22 * s, y - 32 * s, 44 * s, 26 * s, C.blue, null, 2);
+    rect(c, x - 34 * s, y - 2 * s, 68 * s, 6 * s, C.steel, null, 3);
+  }
+  function house(c, x, y, s, col) {
+    rect(c, x - 14 * s, y - 14 * s, 28 * s, 22 * s, col || C.white, C.steel, 2);
+    c.fillStyle = C.orange; c.beginPath(); c.moveTo(x - 18 * s, y - 14 * s); c.lineTo(x, y - 28 * s); c.lineTo(x + 18 * s, y - 14 * s); c.closePath(); c.fill();
+  }
+
+  const A = {};
+
+  A.user = function (c, t) {
+    laptop(c, 70, 150, 1.1); rect(c, 28, 205, 16, 30, C.ink, null, 3); rect(c, 31, 209, 10, 20, C.blue, null, 1);
+    rect(c, 210, 100, 56, 36, C.white, C.steel, 4);
+    c.fillStyle = Math.sin(t * 8) > 0 ? C.teal : '#9bd1d6'; c.fillRect(218, 112, 8, 8); c.fillStyle = C.green; c.fillRect(232, 112, 8, 8);
+    text(c, 'ONT', 238, 128, C.ink2, 11);
+    for (let i = 0; i < 3; i++) { const u = frac(t * 0.8 + i / 3); c.strokeStyle = 'rgba(232,96,44,' + (1 - u).toFixed(2) + ')'; c.lineWidth = 2; c.beginPath(); c.arc(210, 118, 14 + u * 70, Math.PI * 0.72, Math.PI * 1.28); c.stroke(); }
+    flow(c, [[110, 130], [208, 116]], t, 3, C.orange, 3.5, 0.5);
+    line(c, [[266, 118], [470, 118]], C.teal, 5); flow(c, [[266, 118], [470, 118]], t, 4, C.white, 3, 0.5);
+    text(c, L('فیبر نوری', 'Optical fiber'), 370, 100, C.teal, 12);
+    text(c, 'Wi‑Fi', 150, 108, C.orange, 12);
+    text(c, '1490 nm ↓  1310 nm ↑', 370, 142, C.ink2, 11, 'center', 500);
+    // phone to tower
+    line(c, [[36, 205], [150, 215], [300, 215]], C.orange, 1.5, [5, 5]);
+    c.strokeStyle = C.ink; c.lineWidth = 3; c.beginPath(); c.moveTo(330, 245); c.lineTo(330, 175); c.stroke();
+    for (let i = 0; i < 3; i++) { const u = frac(t * 0.6 + i / 3); c.strokeStyle = 'rgba(20,144,163,' + (1 - u).toFixed(2) + ')'; c.beginPath(); c.arc(330, 178, 8 + u * 36, -Math.PI * 0.9, -Math.PI * 0.1); c.stroke(); }
+    text(c, '4G / 5G', 400, 215, C.teal, 12);
+  };
+
+  A.cabinet = function (c, t) {
+    line(c, [[10, 135], [150, 135]], C.teal, 6); flow(c, [[10, 135], [150, 135]], t, 4, C.white, 3, 0.45);
+    rect(c, 150, 105, 70, 60, C.white, C.steel, 6); text(c, L('اسپلیتر', 'Splitter'), 185, 128, C.ink, 12); text(c, '1:8', 185, 148, C.orange, 14, 'center', 800);
+    const ys = []; for (let i = 0; i < 8; i++) ys.push(28 + i * 30);
+    ys.forEach((y, i) => {
+      const pts = [[220, 135], [300, y], [390, y]]; line(c, pts, C.teal, 2);
+      const act = Math.floor(frac(t * 0.25) * 8) === i;
+      flow(c, pts, t + i * 0.1, 1, act ? C.orange : C.teal, 3, 0.5);
+      house(c, 420, y + 6, 0.55, act ? '#FFE3D4' : C.white);
+    });
+    text(c, L('هر خانه یک بازه‌ی زمانی', 'One time slot per home'), 110, 40, C.orange, 12);
+    text(c, L('پایین‌سو', 'down'), 80, 112, C.teal, 11); text(c, '≈ 10 dB', 260, 258, C.ink2, 12);
+  };
+
+  A.exchange = function (c, t) {
+    for (let i = 0; i < 6; i++) { const y = 30 + i * 36; house(c, 28, y + 8, 0.5); line(c, [[48, y], [150, 135]], i % 2 ? C.teal : C.steel, 1.8); flow(c, [[48, y], [150, 135]], t + i * 0.17, 1, C.orange, 2.8, 0.4); }
+    rect(c, 150, 85, 120, 100, C.white, C.steel, 6); text(c, 'OLT', 210, 104, C.ink, 14, 'center', 800);
+    for (let r = 0; r < 4; r++) for (let k = 0; k < 6; k++) { rect(c, 162 + k * 17, 118 + r * 14, 12, 8, Math.sin(t * 6 + r * 2 + k * 3) > -0.2 ? C.teal : '#BFD9DC', null, 1); }
+    line(c, [[270, 135], [470, 135]], C.teal, 7); flow(c, [[270, 135], [470, 135]], t, 5, C.white, 3, 0.6);
+    text(c, '10 / 100 GbE', 380, 114, C.teal, 12);
+    rect(c, 150, 210, 50, 36, C.steelD || C.navy, null, 4); text(c, '−48 V', 175, 228, C.white, 12);
+    rect(c, 215, 210, 50, 36, C.orange, null, 4); text(c, L('ژنراتور', 'Genset'), 240, 228, C.white, 11);
+    line(c, [[200, 228], [215, 228]], C.ink, 2); text(c, L('برق اضطراری', 'Backup power'), 370, 228, C.ink2, 12);
+  };
+
+  A.fiber = function (c, t) {
+    rect(c, 20, 90, 440, 90, '#DDE6F1', null, 6); rect(c, 20, 122, 440, 26, '#BBD3EC', null, 0);
+    text(c, L('غلاف 125 µm', 'Cladding 125 µm'), 90, 104, C.ink2, 11); text(c, L('هسته 9 µm', 'Core 9 µm'), 80, 135, C.navy, 11);
+    const pts = []; const x0 = 20, n = 14, dx = 440 / n;
+    for (let i = 0; i <= n; i++) pts.push([x0 + i * dx, i % 2 ? 124 : 146]);
+    line(c, pts, 'rgba(232,96,44,0.35)', 2);
+    const p = along(pts, t * 0.25); dot(c, p[0], p[1], 5, C.orange);
+    text(c, L('بازتاب کلی داخلی', 'Total internal reflection'), 240, 160, C.orange, 11);
+    const cols = [C.orange, C.teal, C.yellow, C.violet];
+    cols.forEach((col, i) => { const y = 30 + i * 14; line(c, [[20, y], [200, y]], col, 3); const x = 20 + frac(t * 0.5 + i * 0.2) * 180; rect(c, x, y - 4, 14, 8, col, null, 2); });
+    text(c, 'λ1–λ4  →  MUX', 330, 40, C.ink, 12, 'center', 700);
+    rect(c, 215, 14, 8, 62, C.navy, null, 2);
+    line(c, [[223, 45], [300, 45]], C.ink2, 2); flow(c, [[223, 45], [300, 45]], t, 3, C.white, 3, 0.5);
+    text(c, L('طول‌موج‌های رنگی در یک فیبر', 'Colors share one fiber'), 240, 205, C.ink2, 12);
+    rect(c, 345, 222, 90, 28, C.white, C.teal, 6); text(c, 'EDFA 80 km', 390, 237, C.teal, 12);
+    text(c, '0.2 dB/km', 120, 237, C.ink2, 12);
+  };
+
+  A.datacenter = function (c, t) {
+    const spines = [150, 330], leaves = [60, 160, 260, 360, 440].slice(0, 4).map((x) => x + 10);
+    spines.forEach((x) => { rect(c, x - 40, 24, 80, 26, C.navy, null, 5); text(c, 'Spine', x, 37, C.white, 11); });
+    leaves.forEach((x, i) => {
+      rect(c, x - 30, 110, 60, 22, C.blue, null, 5); text(c, 'Leaf', x, 121, C.white, 11);
+      spines.forEach((s, j) => { const pts = [[s, 50], [x, 110]]; line(c, pts, '#A9B9D3', 1.5); flow(c, pts, t + i * 0.13 + j * 0.3, 1, C.orange, 3, 0.6); });
+      for (let k = 0; k < 4; k++) { const sx = x - 27 + k * 18; rect(c, sx, 190, 14, 40, C.white, C.steel, 2); line(c, [[x, 132], [sx + 7, 190]], '#C7CFDC', 1);
+        for (let m = 0; m < 3; m++) rect(c, sx + 3, 196 + m * 10, 8, 4, Math.sin(t * 5 + i * 2 + k * 3 + m * 5) > 0 ? C.teal : '#C8D6D8', null, 1); }
+    });
+    text(c, L('سرورها در رک', 'Servers in racks'), 240, 250, C.ink2, 12);
+  };
+
+  A.ixp = function (c, t) {
+    const cx = 200, cy = 135, names = ['AS A', 'AS B', 'AS C', 'AS D', 'AS E'];
+    names.forEach((n, i) => {
+      const a = i * TAU / 5 - Math.PI / 2, x = cx + Math.cos(a) * 100, y = cy + Math.sin(a) * 95;
+      line(c, [[x, y], [cx, cy]], '#B7C4D8', 2); flow(c, [[x, y], [cx, cy]], t + i * 0.2, 1, C.teal, 3.5, 0.5); flow(c, [[cx, cy], [x, y]], t + i * 0.2 + 0.5, 1, C.orange, 3.5, 0.5);
+      dot(c, x, y, 20, C.white); c.strokeStyle = C.blue; c.lineWidth = 2; c.beginPath(); c.arc(x, y, 20, 0, TAU); c.stroke(); text(c, n, x, y, C.navy, 11);
+    });
+    dot(c, cx, cy, 30, C.navy); text(c, 'IXP', cx, cy - 4, C.white, 13, 'center', 800); text(c, 'BGP', cx, cy + 11, C.yellow, 11);
+    line(c, [[cx + 30, cy], [440, cy]], C.orange, 5); flow(c, [[cx + 30, cy], [440, cy]], t, 4, C.white, 3, 0.4);
+    text(c, L('به خارج', 'To abroad'), 380, cy - 20, C.orange, 12); text(c, L('زمینی · دریایی · ماهواره', 'land · sea · satellite'), 380, cy + 24, C.ink2, 11, 'center', 500);
+  };
+
+  A.satellite = function (c, t) {
+    c.fillStyle = '#C9D8EA'; c.beginPath(); c.arc(240, 520, 330, Math.PI, TAU); c.fill();
+    const sx = 360, sy = 52; rect(c, sx - 14, sy - 10, 28, 20, C.yellow, null, 3); rect(c, sx - 56, sy - 4, 38, 8, C.blue, null, 1); rect(c, sx + 18, sy - 4, 38, 8, C.blue, null, 1);
+    text(c, 'GEO  35,786 km', sx, sy - 24, C.ink2, 11);
+    const dx = 120, dy = 205; c.fillStyle = C.white; c.strokeStyle = C.steel; c.lineWidth = 2; c.beginPath(); c.ellipse(dx, dy, 26, 12, -0.9, 0, TAU); c.fill(); c.stroke(); line(c, [[dx, dy + 4], [dx + 8, 240]], C.steelD || C.navy, 4);
+    line(c, [[dx + 6, dy - 10], [sx - 10, sy + 12]], C.orange, 1.5, [6, 5]); line(c, [[dx + 22, dy - 6], [sx + 10, sy + 14]], C.teal, 1.5, [6, 5]);
+    flow(c, [[dx + 6, dy - 10], [sx - 10, sy + 12]], t, 3, C.orange, 3.5, 0.3); flow(c, [[sx + 10, sy + 14], [dx + 22, dy - 6]], t, 3, C.teal, 3.5, 0.3);
+    text(c, L('ارسال (14 GHz)', 'Uplink (14 GHz)'), 170, 120, C.orange, 12); text(c, L('دریافت (12 GHz)', 'Downlink (12 GHz)'), 330, 150, C.teal, 12);
+    text(c, L('یک پرش ≈ 239 ms', 'One hop ≈ 239 ms'), 330, 232, C.ink, 13, 'center', 700); text(c, L('رفت‌وبرگشت ≈ 480 ms+', 'Round trip ≈ 480 ms+'), 330, 252, C.ink2, 12);
+  };
+
+  A.broadcast = function (c, t) {
+    const tx = 150, ty = 120;
+    for (let i = 0; i < 4; i++) { const u = frac(t * 0.4 + i / 4); c.strokeStyle = 'rgba(232,96,44,' + (0.7 * (1 - u)).toFixed(2) + ')'; c.lineWidth = 2; c.beginPath(); c.arc(tx, ty, 14 + u * 150, 0, TAU); c.stroke(); }
+    c.fillStyle = C.beige2 || '#C8BA9A'; c.beginPath(); c.moveTo(tx - 6, 220); c.lineTo(tx - 2, ty + 10); c.lineTo(tx + 2, ty + 10); c.lineTo(tx + 6, 220); c.fill();
+    rect(c, tx - 12, ty - 4, 24, 14, C.blue, null, 5); line(c, [[tx, ty - 4], [tx, ty - 36]], C.orange, 3);
+    [[420, 150], [410, 70], [330, 200]].forEach((p) => { house(c, p[0], p[1], 0.7); line(c, [[p[0], p[1] - 20], [p[0] + 4, p[1] - 32]], C.ink, 1.5); });
+    // FM waveform
+    const y0 = 240, N = 220; c.strokeStyle = C.teal; c.lineWidth = 2; c.beginPath();
+    for (let i = 0; i <= N; i++) { const x = 20 + i * 2, m = Math.sin((i + t * 40) * 0.05), ph = (i * 0.5) + 6 * Math.sin((i + t * 40) * 0.05) * 0.9; const y = y0 + 11 * Math.sin(ph + 0); i ? c.lineTo(x, y) : c.moveTo(x, y); }
+    c.stroke(); text(c, L('شکل‌موج FM: فرکانس با صدا تغییر می‌کند', 'FM: frequency follows the sound'), 240, 258, C.ink2, 11, 'center', 500);
+    text(c, '87.5–108 MHz', 150, 24, C.ink, 12, 'center', 700);
+  };
+
+  A.cell = function (c, t) {
+    const cx = 130, cy = 135;
+    [0, 1, 2].forEach((i) => { const a0 = -Math.PI / 2 + i * TAU / 3 - Math.PI / 3, a1 = a0 + TAU / 3; c.fillStyle = ['rgba(20,144,163,0.14)', 'rgba(232,96,44,0.12)', 'rgba(122,92,224,0.12)'][i]; c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, 120, a0, a1); c.closePath(); c.fill(); c.strokeStyle = 'rgba(22,34,59,0.18)'; c.stroke(); });
+    const a = t * 0.5, px = cx + Math.cos(a) * 95, py = cy + Math.sin(a) * 85;
+    c.fillStyle = 'rgba(232,96,44,0.35)'; c.beginPath(); c.moveTo(cx, cy); const da = 0.12, ang = Math.atan2(py - cy, px - cx); c.arc(cx, cy, 108, ang - da, ang + da); c.closePath(); c.fill();
+    line(c, [[cx, cy], [px, py]], C.orange, 1.5, [4, 4]);
+    rect(c, px - 5, py - 9, 10, 18, C.ink, null, 3); rect(c, px - 3, py - 6, 6, 11, C.blue, null, 1);
+    dot(c, cx, cy, 9, C.navy); text(c, 'gNB', cx, cy + 22, C.navy, 11);
+    text(c, L('سه سکتور 120°', '3 sectors × 120°'), 330, 60, C.ink, 13, 'center', 700);
+    text(c, L('باریکه‌ی باریک (beamforming)', 'Narrow beam (beamforming)'), 330, 90, C.orange, 12);
+    text(c, 'n78 · 3.3–3.8 GHz', 330, 122, C.teal, 12); text(c, '64T64R Massive MIMO', 330, 146, C.ink2, 12);
+    line(c, [[cx + 8, cy + 40], [300, 205], [450, 205]], C.teal, 4); flow(c, [[cx + 8, cy + 40], [300, 205], [450, 205]], t, 4, C.white, 3, 0.4);
+    text(c, L('فیبر / مایکروویو به هسته', 'Fiber / microwave to core'), 370, 228, C.ink2, 12);
+  };
+
+  A.microwave = function (c, t) {
+    const x1 = 70, x2 = 410, ty = 80;
+    [x1, x2].forEach((x) => { c.strokeStyle = C.orange; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 12, 230); c.lineTo(x, ty); c.lineTo(x + 12, 230); c.stroke(); for (let k = 0; k < 6; k++) line(c, [[x - 11 + k * 0.4, 230 - k * 25], [x + 11 - k * 0.4, 230 - k * 25 - 12]], C.orange, 1); rect(c, x - 12, ty - 10, 24, 20, C.white, C.steel, 10); });
+    c.fillStyle = 'rgba(20,144,163,0.14)'; c.beginPath(); c.ellipse(240, ty, 170, 38, 0, 0, TAU); c.fill(); c.strokeStyle = 'rgba(20,144,163,0.5)'; c.setLineDash([5, 4]); c.stroke(); c.setLineDash([]);
+    line(c, [[x1 + 12, ty], [x2 - 12, ty]], C.orange, 2); flow(c, [[x1 + 12, ty], [x2 - 12, ty]], t, 5, C.orange, 3.5, 0.5); flow(c, [[x2 - 12, ty + 4], [x1 + 12, ty + 4]], t + 0.3, 5, C.teal, 3, 0.5);
+    c.fillStyle = '#B9C7A5'; c.beginPath(); c.moveTo(0, 270); c.lineTo(0, 236); c.quadraticCurveTo(240, 150, 480, 236); c.lineTo(480, 270); c.fill();
+    text(c, L('دید مستقیم (LOS)', 'Line of sight (LOS)'), 240, 40, C.ink, 13, 'center', 700);
+    text(c, L('ناحیه‌ی فرنل اول: 60٪ آزاد', 'First Fresnel zone: keep 60% clear'), 240, 124, C.teal, 12);
+    text(c, 'r = 8.66·√(d/f)  m', 240, 190, C.ink, 12, 'center', 700);
+    text(c, L('15 GHz، 20 km ≈ 10 m', '15 GHz, 20 km ≈ 10 m'), 240, 210, C.ink2, 11, 'center', 500);
+  };
+
+
+  // ---------- power system ----------
+  const VOLT = '#E0A100';
+  function bolt(c, x, y, s) { c.fillStyle = VOLT; c.beginPath(); c.moveTo(x + 3 * s, y - 9 * s); c.lineTo(x - 5 * s, y + 2 * s); c.lineTo(x, y + 2 * s); c.lineTo(x - 3 * s, y + 10 * s); c.lineTo(x + 6 * s, y - 2 * s); c.lineTo(x + 1 * s, y - 2 * s); c.closePath(); c.fill(); }
+  function sine(c, x0, x1, y, amp, cycles, t, color) {
+    c.strokeStyle = color; c.lineWidth = 2; c.beginPath();
+    for (let i = 0; i <= 80; i++) { const x = lerp(x0, x1, i / 80), yy = y + Math.sin((i / 80) * cycles * TAU - t * 6) * amp; i ? c.lineTo(x, yy) : c.moveTo(x, yy); } c.stroke();
+  }
+
+  A.plant = function (c, t) {
+    const blocks = [['Compressor', 20, '#9EB0CC'], [L('احتراق', 'Combustor'), 108, '#F3B38E'], [L('توربین گاز', 'Gas turbine'), 196, '#9EB0CC'], [L('ژنراتور', 'Generator'), 300, '#F2D58A']];
+    c.strokeStyle = C.ink2; c.lineWidth = 6; c.beginPath(); c.moveTo(50, 70); c.lineTo(340, 70); c.stroke();            // shaft
+    blocks.forEach((b, i) => { const w = i === 3 ? 70 : 72; rect(c, b[1], 40, w, 60, b[2], C.ink2, 6); text(c, b[0], b[1] + w / 2, 111, C.ink, 11); });
+    for (let k = 0; k < 4; k++) { const a = t * 6 + k * TAU / 4; line(c, [[56, 70], [56 + Math.cos(a) * 18, 70 + Math.sin(a) * 22]], C.ink, 2); line(c, [[232, 70], [232 + Math.cos(a) * 18, 70 + Math.sin(a) * 22]], C.ink, 2); }
+    if (Math.sin(t * 12) > -0.3) { c.fillStyle = C.orange; c.beginPath(); c.moveTo(144, 88); c.quadraticCurveTo(138, 62, 146, 50); c.quadraticCurveTo(156, 64, 152, 88); c.fill(); }
+    text(c, L('گاز طبیعی', 'Natural gas'), 70, 22, C.ink2, 11); flow(c, [[10, 30], [108, 56]], t, 3, C.orange, 3, 0.5);
+    line(c, [[232, 100], [232, 150], [110, 150]], '#C0592B', 4); flow(c, [[232, 100], [232, 150], [110, 150]], t, 4, '#F6A07A', 3, 0.4); text(c, L('گرمای اگزوز', 'Exhaust heat'), 250, 138, '#C0592B', 11, 'left');
+    rect(c, 40, 140, 70, 50, '#CFE0F0', C.blue, 6); text(c, 'HRSG', 75, 165, C.navy, 11);
+    line(c, [[75, 190], [75, 225], [170, 225]], C.blue, 3); flow(c, [[75, 190], [75, 225], [170, 225]], t, 3, C.blue, 3, 0.4); text(c, L('بخار', 'Steam'), 40, 210, C.blue, 11);
+    rect(c, 170, 205, 80, 40, '#BBD3EC', C.blue, 6); text(c, L('توربین بخار', 'Steam turbine'), 210, 225, C.navy, 11);
+    line(c, [[250, 225], [335, 225], [335, 100]], C.ink2, 3);
+    sine(c, 360, 470, 170, 18, 2, t, VOLT); bolt(c, 415, 120, 1.4); text(c, '50 Hz · 3000 rpm', 415, 215, C.ink, 12, 'center', 700); text(c, '≈ 55–60 %', 415, 238, C.ink2, 12);
+  };
+
+  A.hvsub = function (c, t) {
+    function row(y, title, thick, volts, loss) {
+      text(c, title, 20, y - 28, C.ink, 12, 'left', 700);
+      line(c, [[30, y], [450, y]], C.steel, 3);
+      for (let i = 0; i < 8; i++) { const p = along([[30, y], [450, y]], t * 0.35 + i / 8); dot(c, p[0], p[1], thick, VOLT); }
+      for (let i = 0; i < loss; i++) { const x = 90 + i * 70, u = frac(t * 0.9 + i * 0.2); c.fillStyle = 'rgba(232,96,44,' + (0.6 * (1 - u)).toFixed(2) + ')'; c.beginPath(); c.arc(x, y - 10 - u * 22, 6 + u * 4, 0, TAU); c.fill(); }
+      text(c, volts, 450, y + 22, C.ink2, 11, 'right');
+    }
+    row(70, L('ولتاژ پایین ← جریان زیاد ← تلفات زیاد', 'Low voltage → big current → big loss'), 5.5, '20 kV · I = 20×', 5);
+    row(170, L('ولتاژ بالا ← جریان کم ← تلفات کم', 'High voltage → small current → small loss'), 2, '400 kV · I = 1×', 1);
+    text(c, 'P = √3 · V · I · cosφ', 240, 240, C.ink, 14, 'center', 800); text(c, 'Ploss = 3 · I² · R', 240, 260, C.orange, 12);
+  };
+
+  A.distsub = function (c, t) {
+    rect(c, 20, 110, 70, 50, '#C9D4E6', C.navy, 6); text(c, '63 kV', 55, 128, C.navy, 12, 'center', 700); text(c, '↓ 20 kV', 55, 146, C.ink2, 11);
+    const feeders = [[200, 40], [200, 135], [200, 230]];
+    feeders.forEach((f, i) => {
+      const pts = [[90, 135], [140, 135], [140, f[1]], [f[0], f[1]]]; line(c, pts, VOLT, 3); flow(c, pts, t + i * 0.2, 3, '#7a5600', 3, 0.35);
+      rect(c, f[0], f[1] - 12, 24, 24, '#BBC6D6', C.navy, 4); text(c, 'T', f[0] + 12, f[1], C.navy, 11, 'center', 700);
+      for (let h = 0; h < 3; h++) { const hx = 300 + h * 55, pts2 = [[f[0] + 24, f[1]], [hx, f[1]]]; line(c, pts2, '#B7871A', 1.5); house(c, hx, f[1] + 6, 0.55, ((t * 0.7 + i + h) % 3 < 2) ? '#FFF1BF' : C.white); }
+    });
+    text(c, L('فیدر 20 kV', '20 kV feeder'), 160, 18, C.ink2, 11); text(c, L('ترانس محلی ← 380/220 V', 'Local transformer → 380/220 V'), 360, 262, C.ink, 11, 'center', 600);
+  };
+
+  A.solar = function (c, t) {
+    dot(c, 60, 50, 22, C.yellow); for (let i = 0; i < 10; i++) { const a = i * TAU / 10 + t * 0.4; line(c, [[60 + Math.cos(a) * 28, 50 + Math.sin(a) * 28], [60 + Math.cos(a) * 40, 50 + Math.sin(a) * 40]], C.yellow, 2); }
+    c.save(); c.translate(120, 150); c.rotate(-0.3); rect(c, 0, 0, 90, 24, C.navy, C.steel, 2); for (let i = 1; i < 6; i++) line(c, [[i * 15, 0], [i * 15, 24]], C.blue, 1); c.restore();
+    flow(c, [[85, 80], [140, 135]], t, 3, C.yellow, 3, 0.5);
+    rect(c, 235, 120, 52, 40, C.white, C.steel, 5); text(c, 'DC→AC', 261, 140, C.ink, 11, 'center', 700);
+    line(c, [[205, 150], [235, 140]], '#B7871A', 2); line(c, [[287, 140], [330, 140]], VOLT, 3); flow(c, [[287, 140], [330, 140]], t, 3, '#7a5600', 3, 0.5); text(c, '50 Hz', 335, 140, C.ink, 11, 'left');
+    // wind
+    c.strokeStyle = C.steel; c.lineWidth = 4; c.beginPath(); c.moveTo(420, 200); c.lineTo(420, 80); c.stroke();
+    for (let k = 0; k < 3; k++) { const a = t * 2.2 + k * TAU / 3; line(c, [[420, 80], [420 + Math.cos(a) * 46, 80 + Math.sin(a) * 46]], C.ink, 3); }
+    dot(c, 420, 80, 5, C.ink); text(c, 'P = ½ρAv³Cp', 420, 218, C.ink2, 11);
+    // daily curve
+    const x0 = 40, x1 = 280, y0 = 245; line(c, [[x0, y0], [x1, y0]], C.steel, 1.5); c.strokeStyle = C.orange; c.lineWidth = 2; c.beginPath();
+    for (let i = 0; i <= 40; i++) { const u = i / 40, y = y0 - Math.max(0, Math.sin(u * Math.PI)) * 50; i ? c.lineTo(lerp(x0, x1, u), y) : c.moveTo(lerp(x0, x1, u), y); } c.stroke();
+    const u = frac(t * 0.12); dot(c, lerp(x0, x1, u), y0 - Math.sin(u * Math.PI) * 50, 4, C.ink); text(c, L('تولید خورشیدی در طول روز', 'Solar output through the day'), 160, 196, C.ink2, 11);
+  };
+
+  A.sitepower = function (c, t) {
+    const T = t % 18, grid = T < 4 || T > 14, gen = T > 9.5 && T < 14, bat = !grid && !gen;
+    const soc = T < 4 ? 1 : T < 9.5 ? 1 - (T - 4) / 5.5 * 0.55 : T < 14 ? 0.45 + (T - 9.5) / 4.5 * 0.15 : Math.min(1, 0.6 + (T - 14) / 4 * 0.4);
+    rect(c, 20, 60, 70, 44, grid ? '#D6EAD0' : '#F4C9C0', C.ink2, 6); text(c, L('برق شهر', 'Mains'), 55, 82, C.ink, 12, 'center', 700); text(c, grid ? 'OK' : L('قطع', 'OUT'), 55, 98, grid ? C.green : C.orange, 12, 'center', 800);
+    rect(c, 20, 170, 70, 44, gen ? '#F2D58A' : '#E6E0D0', C.ink2, 6); text(c, L('دیزل', 'Genset'), 55, 192, C.ink, 12, 'center', 700); text(c, T > 7.5 && T <= 9.5 ? L('استارت…', 'starting…') : gen ? 'ON' : 'OFF', 55, 207, C.ink2, 11);
+    rect(c, 150, 115, 80, 44, C.white, C.navy, 6); text(c, L('رکتیفایر', 'Rectifier'), 190, 132, C.navy, 12, 'center', 700); text(c, '→ −48 V', 190, 148, C.ink2, 11);
+    rect(c, 290, 40, 70, 90, C.white, C.navy, 6); rect(c, 298, 50 + 70 * (1 - soc), 54, 70 * soc, soc > 0.5 ? '#9FD39A' : '#F2B84B', null, 3); text(c, L('باتری', 'Battery'), 325, 28, C.navy, 12, 'center', 700); text(c, Math.round(soc * 100) + '%', 325, 85, C.ink, 13, 'center', 800);
+    rect(c, 400, 125, 66, 56, C.navy, null, 6); text(c, L('بار مخابراتی', 'Telecom load'), 433, 148, C.white, 11, 'center', 700); text(c, 'RAN / OLT', 433, 165, '#BBD3EC', 11);
+    if (grid) { line(c, [[90, 82], [150, 130]], VOLT, 3); flow(c, [[90, 82], [150, 130]], t, 3, '#7a5600', 3, 0.5); }
+    if (gen) { line(c, [[90, 192], [150, 148]], VOLT, 3); flow(c, [[90, 192], [150, 148]], t, 3, '#7a5600', 3, 0.5); }
+    if (grid || gen) { line(c, [[230, 137], [290, 100]], VOLT, 3); flow(c, [[230, 137], [290, 100]], t, 3, '#7a5600', 3, 0.5); line(c, [[230, 137], [400, 150]], VOLT, 3); flow(c, [[230, 137], [400, 150]], t, 3, '#7a5600', 3, 0.5); }
+    if (bat) { line(c, [[360, 100], [400, 140]], VOLT, 3); flow(c, [[360, 100], [400, 140]], t, 3, '#7a5600', 3, 0.5); text(c, L('باتری بار را می‌گیرد؛ بدون وقفه', 'Battery carries the load — no break'), 240, 255, C.orange, 12, 'center', 700); }
+    else text(c, gen ? L('دیزل بار را می‌دهد و باتری شارژ می‌شود', 'Generator feeds the load and recharges batteries') : L('برق شهر برقرار است', 'Mains healthy'), 240, 255, C.ink2, 12, 'center', 600);
+  };
+
+  function loop(ms) {
+    if (!running) return;
+    const t = (ms - t0) / 1000; bg(ctx); try { A[running](ctx, t); } catch (e) { /* keep animating */ }
+    raf = requestAnimationFrame(loop);
+  }
+  window.UnitAnim = {
+    start: function (canvas, id) {
+      this.stop(); if (!A[id]) return;
+      cv = canvas; const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      cv.width = W * dpr; cv.height = H * dpr; ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      running = id; t0 = performance.now();
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { bg(ctx); A[id](ctx, 1.2); running = null; return; }
+      raf = requestAnimationFrame(loop);
+    },
+    stop: function () { running = null; cancelAnimationFrame(raf); }
+  };
+})();
+
+  </script>
+  <script>
+/* radio.js — the “Radio lab”: a bench instrument driven by RadioCore (real link-budget + modulation math).
+ * Window.Lab.open(presetId) / close() / relabel(). */
+(function () {
+  'use strict';
+  const R = window.RadioCore, TAU = Math.PI * 2;
+  const b = (fa, en) => ({ fa: fa, en: en });
+  const tt = (k) => I18N.t(k);
+
+  const PRESETS = {
+    fm:   { name: b('رادیو FM', 'FM radio'),           mod: 'FM',    fMHz: 98,    dKm: 60,    ptDbm: 77, gtDbi: 6,  grDbi: -3, extraDb: 55, bMHz: 0.2,  nfDb: 8 },
+    am:   { name: b('رادیو AM', 'AM radio'),           mod: 'AM',    fMHz: 0.9,   dKm: 150,   ptDbm: 77, gtDbi: 0,  grDbi: -10, extraDb: 70, bMHz: 0.01, nfDb: 30 },
+    g5:   { name: b('دکل 5G', '5G cell'),              mod: 'QAM16', fMHz: 3500,  dKm: 0.8,   ptDbm: 43, gtDbi: 20, grDbi: 0,  extraDb: 15, bMHz: 100,  nfDb: 7 },
+    wifi: { name: b('Wi‑Fi خانگی', 'Home Wi‑Fi'),      mod: 'QAM16', fMHz: 2400,  dKm: 0.03,  ptDbm: 20, gtDbi: 3,  grDbi: 0,  extraDb: 20, bMHz: 20,   nfDb: 7 },
+    sat:  { name: b('ماهواره‌ی Ku', 'Ku satellite'),   mod: 'QPSK',  fMHz: 12000, dKm: 36000, ptDbm: 50, gtDbi: 30, grDbi: 38, extraDb: 1,  bMHz: 36,   nfDb: 1.2 },
+    mw:   { name: b('مایکروویو 15 GHz', '15 GHz microwave'), mod: 'QAM16', fMHz: 15000, dKm: 20, ptDbm: 27, gtDbi: 38, grDbi: 38, extraDb: 6, bMHz: 28, nfDb: 5 }
+  };
+  const MODS = [['AM', 'AM'], ['FM', 'FM'], ['BPSK', 'BPSK'], ['QPSK', 'QPSK'], ['QAM16', '16‑QAM']];
+
+  const fmtF = (v) => v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 1 : 2) + ' GHz' : v < 1 ? (v * 1000).toFixed(0) + ' kHz' : v.toFixed(v < 10 ? 2 : 1) + ' MHz';
+  const fmtD = (v) => v < 1 ? (v * 1000).toFixed(0) + ' m' : v < 100 ? v.toFixed(1) + ' km' : Math.round(v).toLocaleString('en') + ' km';
+  const fmtDb = (u) => (v) => v.toFixed(Math.abs(v) < 10 && v % 1 ? 1 : 0) + ' ' + u;
+  const KNOBS = [
+    { key: 'fMHz',    i18n: 'freq',  min: 0.5,   max: 40000, log: true, fmt: fmtF },
+    { key: 'dKm',     i18n: 'dist',  min: 0.01,  max: 40000, log: true, fmt: fmtD },
+    { key: 'ptDbm',   i18n: 'ptx',   min: -20,   max: 90, step: 1,   fmt: fmtDb('dBm') },
+    { key: 'gtDbi',   i18n: 'gtx',   min: -10,   max: 60, step: 1,   fmt: fmtDb('dBi') },
+    { key: 'grDbi',   i18n: 'grx',   min: -10,   max: 60, step: 1,   fmt: fmtDb('dBi') },
+    { key: 'extraDb', i18n: 'extra', min: 0,     max: 100, step: 1,  fmt: fmtDb('dB') },
+    { key: 'bMHz',    i18n: 'bw',    min: 0.005, max: 500, log: true, fmt: fmtF },
+    { key: 'nfDb',    i18n: 'nf',    min: 0,     max: 40, step: 0.5, fmt: fmtDb('dB') }
+  ];
+
+  const S = { preset: 'g5', fading: false, text: 'Hello Tehran' };
+  Object.assign(S, PRESETS.g5);
+
+  let root, built = false, open = false, raf = 0, last = 0, opener = null;
+  const el = {}, cv = {}, knobCtl = {};
+  const sim = { lb: null, sym: null, msg: null, nMsgSym: 0, spTx: null, spAvg: null, errs: 0, bits: 0, pts: null, cap: null,
+    decoded: '', decAt: 0, snrOut: NaN, berT: NaN, curves: null, sweep: null, dirty: true };
+
+  const clamp = (v, a, c) => Math.max(a, Math.min(c, v));
+  const isDigital = () => R.MODS[S.mod].digital;
+
+  // ---------- DOM ----------
+  function build() {
+    root = document.getElementById('lab');
+    root.innerHTML =
+      '<div class="lab-shell" role="dialog" aria-modal="true" aria-labelledby="labTitle">' +
+      '<header class="lab-head"><div><h2 id="labTitle" data-i18n="labTitle"></h2><p data-i18n="labSub"></p></div>' +
+      '<button type="button" class="lab-close" data-i18n="close"></button></header>' +
+      '<div class="lab-body">' +
+        '<section class="rack" aria-label="controls">' +
+          '<div class="grp"><h3 data-i18n="scenarios"></h3><div class="seg" id="segPre"></div></div>' +
+          '<div class="grp"><h3 data-i18n="modulation"></h3><div class="seg" id="segMod"></div></div>' +
+          '<div class="grp"><h3 data-i18n="channel"></h3><div class="seg" id="segCh"></div></div>' +
+          '<div class="knobs" id="knobs"></div>' +
+          '<div class="grp" id="msgGrp"><h3 data-i18n="message"></h3><input id="msgIn" type="text" maxlength="24" dir="auto" autocomplete="off" spellcheck="false"></div>' +
+        '</section>' +
+        '<section class="screens">' +
+          '<figure class="screen wide"><figcaption data-i18n="scope"></figcaption><canvas id="cvScope"></canvas></figure>' +
+          '<figure class="screen"><figcaption data-i18n="spectrum"></figcaption><canvas id="cvSpec"></canvas></figure>' +
+          '<figure class="screen"><figcaption id="capC"></figcaption><canvas id="cvC"></canvas></figure>' +
+          '<figure class="screen"><figcaption id="capB"></figcaption><canvas id="cvB"></canvas></figure>' +
+        '</section>' +
+      '</div>' +
+      '<footer class="lab-foot"><div class="cells" id="cells"></div>' +
+      '<div class="rxline"><span class="led" id="led"></span><strong id="status"></strong><span class="msgs" id="msgs"></span></div>' +
+      '<p class="note" id="note"></p></footer></div>';
+
+    ['cvScope', 'cvSpec', 'cvC', 'cvB'].forEach((id) => { cv[id] = document.getElementById(id); });
+    el.cells = document.getElementById('cells'); el.led = document.getElementById('led'); el.status = document.getElementById('status');
+    el.msgs = document.getElementById('msgs'); el.note = document.getElementById('note'); el.msgGrp = document.getElementById('msgGrp');
+    el.capC = document.getElementById('capC'); el.capB = document.getElementById('capB'); el.msgIn = document.getElementById('msgIn');
+    root.querySelector('.lab-close').addEventListener('click', () => Lab.close());
+    root.addEventListener('keydown', trapFocus);
+
+    // segmented controls
+    const segPre = document.getElementById('segPre');
+    Object.keys(PRESETS).forEach((id) => segPre.appendChild(segBtn(id, '', () => applyPreset(id))));
+    const segMod = document.getElementById('segMod');
+    MODS.forEach((m) => segMod.appendChild(segBtn(m[0], m[1], () => { S.mod = m[0]; S.preset = 'custom'; changed(true); })));
+    const segCh = document.getElementById('segCh');
+    segCh.appendChild(segBtn('awgn', '', () => { S.fading = false; S.preset = S.preset; changed(true); }));
+    segCh.appendChild(segBtn('ray', '', () => { S.fading = true; changed(true); }));
+
+    // knobs
+    const knobs = document.getElementById('knobs');
+    KNOBS.forEach((k) => { const c = makeKnob(k); knobs.appendChild(c.el); knobCtl[k.key] = c; });
+
+    el.msgIn.value = S.text;
+    el.msgIn.addEventListener('input', () => { S.text = el.msgIn.value; changed(false); });
+
+    // readout cells
+    [['fspl', 'dB'], ['prx', 'dBm'], ['noise', 'dBm'], ['snr', 'dB'], ['ebn0', 'dB'], ['berT', ''], ['berS', ''], ['snrOut', 'dB']].forEach((c) => {
+      const d = document.createElement('div'); d.className = 'cell'; d.id = 'cell-' + c[0];
+      d.innerHTML = '<span class="cl" data-i18n="' + c[0] + '"></span><output class="cv"></output><span class="cu">' + c[1] + '</span>';
+      el.cells.appendChild(d);
+    });
+    window.addEventListener('resize', () => { if (open) fitAll(); });
+    built = true;
+  }
+  function segBtn(id, label, fn) {
+    const bt = document.createElement('button'); bt.type = 'button'; bt.dataset.id = id; bt.className = 'sb';
+    if (label) bt.textContent = label; bt.addEventListener('click', fn); return bt;
+  }
+  function trapFocus(e) {
+    if (e.key !== 'Tab') return;
+    const f = [...root.querySelectorAll('button, input, [tabindex="0"]')].filter((x) => !x.disabled && x.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], lastEl = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); lastEl.focus(); }
+    else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); first.focus(); }
+  }
+
+  // ---------- knob ----------
+  function toNorm(k, v) { return k.log ? Math.log(v / k.min) / Math.log(k.max / k.min) : (v - k.min) / (k.max - k.min); }
+  function fromNorm(k, n) {
+    n = clamp(n, 0, 1);
+    if (k.log) { const v = k.min * Math.pow(k.max / k.min, n); const p = Math.pow(10, Math.floor(Math.log10(v)) - 2); return Math.round(v / p) * p; }
+    const v = k.min + n * (k.max - k.min); return Math.round(v / k.step) * k.step;
+  }
+  function makeKnob(k) {
+    const e = document.createElement('div'); e.className = 'knob'; e.tabIndex = 0; e.setAttribute('role', 'slider');
+    e.innerHTML = '<div class="dial"><i></i></div><span class="kl"></span><output class="kv"></output>';
+    const kl = e.querySelector('.kl'), kv = e.querySelector('.kv'), dial = e.querySelector('.dial');
+    function render() {
+      const n = toNorm(k, S[k.key]); dial.style.setProperty('--a', (-135 + 270 * clamp(n, 0, 1)).toFixed(1) + 'deg');
+      kv.textContent = k.fmt(S[k.key]); kl.textContent = tt(k.i18n);
+      e.setAttribute('aria-label', tt(k.i18n)); e.setAttribute('aria-valuemin', 0); e.setAttribute('aria-valuemax', 100);
+      e.setAttribute('aria-valuenow', Math.round(clamp(n, 0, 1) * 100)); e.setAttribute('aria-valuetext', k.fmt(S[k.key]));
+    }
+    function setNorm(n) { S[k.key] = fromNorm(k, n); S.preset = 'custom'; render(); changed(false); }
+    let y0 = 0, n0 = 0, drag = false;
+    dial.style.touchAction = 'none';
+    dial.addEventListener('pointerdown', (ev) => { drag = true; y0 = ev.clientY; n0 = toNorm(k, S[k.key]); dial.setPointerCapture(ev.pointerId); e.focus(); });
+    dial.addEventListener('pointermove', (ev) => { if (drag) setNorm(n0 + (y0 - ev.clientY) / 160); });
+    dial.addEventListener('pointerup', () => { drag = false; }); dial.addEventListener('pointercancel', () => { drag = false; });
+    e.addEventListener('wheel', (ev) => { ev.preventDefault(); setNorm(toNorm(k, S[k.key]) - Math.sign(ev.deltaY) * 0.02); }, { passive: false });
+    e.addEventListener('keydown', (ev) => {
+      const st = ev.shiftKey ? 0.05 : 0.01; let n = toNorm(k, S[k.key]);
+      if (ev.key === 'ArrowUp' || ev.key === 'ArrowRight') n += st; else if (ev.key === 'ArrowDown' || ev.key === 'ArrowLeft') n -= st;
+      else if (ev.key === 'Home') n = 0; else if (ev.key === 'End') n = 1; else return;
+      ev.preventDefault(); setNorm(n);
+    });
+    return { el: e, render: render };
+  }
+
+  // ---------- state & simulation ----------
+  function applyPreset(id) { Object.assign(S, PRESETS[id]); S.preset = id; changed(true); }
+
+  function changed(modelChanged) {
+    KNOBS.forEach((k) => knobCtl[k.key].render());
+    syncSeg(); sim.dirty = true; prepare(); updateCells();
+  }
+  function syncSeg() {
+    root.querySelectorAll('#segPre .sb').forEach((x) => { x.textContent = I18N.pick(PRESETS[x.dataset.id].name); x.setAttribute('aria-pressed', x.dataset.id === S.preset); });
+    root.querySelectorAll('#segMod .sb').forEach((x) => x.setAttribute('aria-pressed', x.dataset.id === S.mod));
+    root.querySelectorAll('#segCh .sb').forEach((x) => { x.textContent = tt(x.dataset.id === 'awgn' ? 'awgn' : 'rayleigh'); x.setAttribute('aria-pressed', (x.dataset.id === 'ray') === S.fading); });
+    el.msgGrp.hidden = !isDigital();
+    el.capC.textContent = isDigital() ? tt('constellation') : tt('audio');
+    el.capB.textContent = isDigital() ? tt('berCurve') : tt('snrCurve');
+    el.note.textContent = isDigital() ? tt('noteDigital') : tt('noteAnalog');
+  }
+
+  function prepare() {
+    sim.lb = R.linkBudget(S); sim.errs = 0; sim.bits = 0; sim.spAvg = null; sim.snrOut = NaN; sim.decoded = ''; sim.decAt = 0;
+    const snr = clamp(sim.lb.snr, -30, 90);
+    if (isDigital()) {
+      const bps = R.MODS[S.mod].bps; sim.msg = R.textToBits(S.text, 24);
+      sim.nMsgSym = Math.ceil(sim.msg.bits.length / bps);
+      const nTot = Math.max(64, sim.nMsgSym), bits = R.buildBits(S.mod, sim.msg.bits, nTot);
+      sim.sym = R.mapSymbols(S.mod, bits, nTot); sim.msgBits = bits;
+      sim.spTx = R.spectrumDb(R.digitalCapture(sim.sym, 64, 1e9, false).tx);
+      const ebn0 = R.dbToLin(snr) / bps; sim.berT = R.berTheory(S.mod, ebn0, S.fading);
+      const awgn = [], ray = [];
+      for (let x = 0; x <= 50; x++) { const e = R.dbToLin(x * 0.5); awgn.push(R.berAwgn(S.mod, e)); ray.push(R.berRayleigh(S.mod, e)); }
+      sim.curves = { awgn: awgn, ray: ray };
+    } else {
+      sim.berT = NaN;
+      sim.spTx = R.spectrumDb(R.analogCapture(S.mod, 90, false, 4096).tx);
+      sim.sweep = []; for (let s = -5; s <= 45; s += 5) sim.sweep.push([s, R.analogCapture(S.mod, s, S.fading, 2048).snrOutDb]);
+    }
+  }
+
+  function stepSim(ms) {
+    const snr = clamp(sim.lb.snr, -30, 90), esn0 = R.dbToLin(snr);
+    if (isDigital()) {
+      const bps = R.MODS[S.mod].bps;
+      sim.cap = R.digitalCapture(sim.sym, 64, esn0, S.fading);
+      // Monte-Carlo batch with fresh random bits → BER & constellation
+      const n = 2000, bits = new Uint8Array(n * bps); for (let i = 0; i < bits.length; i++) bits[i] = Math.random() < 0.5 ? 1 : 0;
+      const s = R.mapSymbols(S.mod, bits, n), y = R.simulateSymbols(S.mod, s.I, s.Q, n, esn0, S.fading), out = new Uint8Array(bits.length);
+      R.demapSymbols(S.mod, y.yi, y.yq, n, out); sim.errs += R.countErrors(bits, out, bits.length); sim.bits += bits.length;
+      if (sim.bits > 2e7) { sim.errs = Math.round(sim.errs / 2); sim.bits = Math.round(sim.bits / 2); }
+      sim.pts = y;
+      if (ms - sim.decAt > 600) {                                           // decode the user's text through the noisy channel
+        const m = R.simulateSymbols(S.mod, sim.sym.I, sim.sym.Q, sim.nMsgSym, esn0, S.fading), ob = new Uint8Array(sim.nMsgSym * bps);
+        R.demapSymbols(S.mod, m.yi, m.yq, sim.nMsgSym, ob); sim.decoded = R.bitsToText(ob, sim.msg.nBytes); sim.decAt = ms;
+      }
+    } else {
+      sim.cap = R.analogCapture(S.mod, snr, S.fading, R.NS);
+      sim.snrOut = isFinite(sim.snrOut) ? 0.85 * sim.snrOut + 0.15 * sim.cap.snrOutDb : sim.cap.snrOutDb;
+    }
+    const sp = R.spectrumDb(sim.cap.rx);
+    if (!sim.spAvg) sim.spAvg = Float32Array.from(sp); else for (let i = 0; i < sp.length; i++) sim.spAvg[i] = 0.65 * sim.spAvg[i] + 0.35 * sp[i];
+  }
+
+  // ---------- readouts ----------
+  function fmtBer(v) { return !isFinite(v) ? '–' : v === 0 ? '0' : v < 1e-9 ? '< 1e-9' : v >= 0.1 ? v.toFixed(2) : v.toExponential(1).replace('e-', 'e−'); }
+  function updateCells() {
+    const lb = sim.lb, dig = isDigital(), bps = dig ? R.MODS[S.mod].bps : 1;
+    const set = (id, v, show) => { const c = document.getElementById('cell-' + id); c.hidden = show === false; if (v !== undefined) c.querySelector('.cv').textContent = v; };
+    set('fspl', lb.fspl.toFixed(1)); set('prx', lb.prx.toFixed(1)); set('noise', lb.noise.toFixed(1)); set('snr', lb.snr.toFixed(1));
+    set('ebn0', (lb.snr - 10 * Math.log10(bps)).toFixed(1), dig); set('berT', fmtBer(sim.berT), dig); set('berS', '', dig); set('snrOut', '', !dig);
+    document.getElementById('cell-snr').querySelector('.cl').textContent = dig ? tt('snr') + ' (Es/N0)' : 'CNR';
+  }
+  function updateLive() {
+    const dig = isDigital(), c = document.getElementById.bind(document);
+    let state;
+    if (dig) {
+      const ber = sim.bits ? sim.errs / sim.bits : sim.berT;
+      c('cell-berS').querySelector('.cv').textContent = sim.bits ? (sim.errs === 0 ? '< ' + fmtBer(1 / sim.bits) : fmtBer(ber)) : '–';
+      c('cell-berS').title = sim.bits ? sim.bits.toLocaleString('en') + ' ' + tt('bits') : '';
+      state = ber < 1e-3 ? 2 : ber < 3e-2 ? 1 : 0;
+      el.msgs.textContent = tt('sent') + ': “' + sim.msg.text + '”   ·   ' + tt('decoded') + ': “' + sim.decoded + '”';
+    } else {
+      c('cell-snrOut').querySelector('.cv').textContent = isFinite(sim.snrOut) ? sim.snrOut.toFixed(1) : '–';
+      state = sim.snrOut > 20 ? 2 : sim.snrOut > 10 ? 1 : 0; el.msgs.textContent = '';
+    }
+    el.led.dataset.s = state; el.status.textContent = tt(['statusBad', 'statusMarg', 'statusGood'][state]);
+  }
+
+  // ---------- drawing ----------
+  const P = { bg: '#0A1424', grid: '#1B2C46', txt: '#8FA4C4', tx: '#F2B84B', rx: '#5FD3C9', dem: '#FF8A5C', dim: '#5B7096' };
+  const sizes = {};
+  function fit(id) {
+    const c = cv[id], dpr = Math.min(window.devicePixelRatio || 1, 2), w = c.clientWidth, h = c.clientHeight;
+    if (!w || !h) return null;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); sizes[id] = [w, h]; return g;
+  }
+  function fitAll() { Object.keys(cv).forEach(fit); }
+  function frame(g, w, h) {
+    g.fillStyle = P.bg; g.fillRect(0, 0, w, h); g.strokeStyle = P.grid; g.lineWidth = 1; g.beginPath();
+    for (let i = 1; i < 8; i++) { const x = Math.round(w * i / 8) + 0.5; g.moveTo(x, 0); g.lineTo(x, h); }
+    for (let i = 1; i < 6; i++) { const y = Math.round(h * i / 6) + 0.5; g.moveTo(0, y); g.lineTo(w, y); }
+    g.stroke();
+  }
+  function lbl(g, s, x, y, col, align) {
+    g.fillStyle = col || P.txt; g.font = '600 11px Vazirmatn, system-ui, sans-serif'; g.textAlign = align || 'left'; g.textBaseline = 'middle';
+    const r = I18N.cv(s); g.direction = r.dir; g.fillText(r.s, x, y);
+  }
+  function trace(g, arr, i0, i1, x0, w, yc, amp, col, lw) {
+    g.strokeStyle = col; g.lineWidth = lw || 1.4; g.beginPath();
+    for (let i = i0; i < i1; i++) { const x = x0 + (i - i0) / (i1 - i0 - 1) * w, y = yc - clamp(arr[i], -amp * 1.6, amp * 1.6) / amp * (sizes._lane * 0.42); i === i0 ? g.moveTo(x, y) : g.lineTo(x, y); }
+    g.stroke();
+  }
+
+  function drawScope() {
+    const g = fit('cvScope'); if (!g || !sim.cap) return; const [w, h] = sizes.cvScope; frame(g, w, h);
+    const lane = h / 3, N = 512, x0 = 52, ww = w - 60; sizes._lane = lane; const cap = sim.cap, dig = isDigital(), i0 = dig ? 0 : 80, i1 = i0 + N;
+    const rms = Math.sqrt(cap.rx.slice(i0, i1).reduce((a, v) => a + v * v, 0) / N);
+    const ampRx = Math.max(dig ? 1.6 : 1.9, rms * 2.4), ampTx = dig ? 1.4 : 1.9, ampD = 1.5;
+    lbl(g, tt('tx'), 6, lane * 0.5, P.tx); lbl(g, tt('rx'), 6, lane * 1.5, P.rx); lbl(g, tt('dem'), 6, lane * 2.5, P.dem);
+    trace(g, cap.tx, i0, i1, x0, ww, lane * 0.5, ampTx, P.tx, 1.3);
+    trace(g, cap.rx, i0, i1, x0, ww, lane * 1.5, ampRx, P.rx, 1);
+    if (dig) {
+      g.strokeStyle = P.dim; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(x0, lane * 2.5); g.lineTo(x0 + ww, lane * 2.5); g.stroke(); g.setLineDash([]);
+      trace(g, cap.demI, i0, i1, x0, ww, lane * 2.5, ampD, P.dem, 1.6);
+      for (let k = 0; k < N / cap.L; k++) {                                   // symbol decision instants
+        const i = k * cap.L + cap.L / 2, x = x0 + i / (N - 1) * ww, y = lane * 2.5 - clamp(cap.demI[i], -2.4, 2.4) / ampD * lane * 0.42;
+        g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 3, 0, TAU); g.fill();
+        g.strokeStyle = 'rgba(143,164,196,.25)'; g.beginPath(); g.moveTo(x, lane * 2); g.lineTo(x, h); g.stroke();
+      }
+    } else {
+      trace(g, cap.x, i0, i1, x0, ww, lane * 2.5, ampD, P.dim, 1.2);
+      trace(g, cap.est, i0, i1, x0, ww, lane * 2.5, ampD, P.dem, 1.6);
+    }
+  }
+
+  function drawSpectrum() {
+    const g = fit('cvSpec'); if (!g || !sim.spAvg) return; const [w, h] = sizes.cvSpec; frame(g, w, h);
+    const lo = 0, hi = 512, tx = sim.spTx; let top = -1e9; for (let i = lo; i < hi; i++) top = Math.max(top, tx[i]);
+    const range = 85, y = (db) => clamp((top + 6 - db) / range, 0, 1) * (h - 22) + 2, xs = (i) => (i - lo) / (hi - lo) * w;
+    function curve(arr, col, fill) {
+      g.beginPath(); g.moveTo(0, h - 20);
+      for (let i = lo; i < hi; i += 2) g.lineTo(xs(i), y(Math.max(arr[i], arr[i + 1])));
+      g.lineTo(w, h - 20); g.closePath(); if (fill) { g.fillStyle = fill; g.fill(); } g.strokeStyle = col; g.lineWidth = 1.2; g.stroke();
+    }
+    curve(tx, P.tx, 'rgba(242,184,75,0.10)'); curve(sim.spAvg, P.rx, null);
+    const bf = isDigital() ? 64 : R.MODS[S.mod].bFactor, half = 4096 / bf / 2;                 // bandwidth markers
+    g.strokeStyle = 'rgba(255,138,92,.55)'; g.setLineDash([4, 4]); [256 - half, 256 + half].forEach((b) => { g.beginPath(); g.moveTo(xs(b), 0); g.lineTo(xs(b), h - 20); g.stroke(); }); g.setLineDash([]);
+    const fsReal = S.bMHz * bf, off = 0.0625 * fsReal;
+    lbl(g, '−' + fmtF(off).replace(/ (.*)/, ' $1'), 4, h - 8); lbl(g, fmtF(S.fMHz), w / 2, h - 8, P.tx, 'center'); lbl(g, '+' + fmtF(off), w - 4, h - 8, P.txt, 'right');
+    lbl(g, 'B = ' + fmtF(S.bMHz), w / 2 + 4, 10, P.dem);
+  }
+
+  function drawConst() {
+    const g = fit('cvC'); if (!g) return; const [w, h] = sizes.cvC; frame(g, w, h);
+    if (isDigital()) {
+      if (!sim.pts) return;
+      const ext = 1.6, s = Math.min(w, h) / (2 * ext) * 0.96, cx = w / 2, cy = h / 2;
+      g.strokeStyle = P.dim; g.beginPath(); g.moveTo(0, cy); g.lineTo(w, cy); g.moveTo(cx, 0); g.lineTo(cx, h); g.stroke();
+      const pts = sim.pts; g.fillStyle = 'rgba(95,211,201,.55)';
+      for (let i = 0; i < 700; i++) { const x = cx + pts.yi[i] * s, y = cy - pts.yq[i] * s; if (x > 0 && x < w && y > 0 && y < h) g.fillRect(x - 1.2, y - 1.2, 2.4, 2.4); }
+      const bits = R.MODS[S.mod].bps, nPts = 1 << bits, ref = R.mapSymbols(S.mod, ((n) => { const a = new Uint8Array(n * bits); for (let k = 0; k < n; k++) for (let j = 0; j < bits; j++) a[k * bits + j] = (k >> (bits - 1 - j)) & 1; return a; })(nPts), nPts);
+      g.strokeStyle = P.tx; g.lineWidth = 1.4; for (let k = 0; k < nPts; k++) { g.beginPath(); g.arc(cx + ref.I[k] * s, cy - ref.Q[k] * s, 5, 0, TAU); g.stroke(); }
+      lbl(g, 'I', w - 12, cy - 8, P.txt, 'right'); lbl(g, 'Q', cx + 6, 10);
+    } else if (sim.cap) {
+      const cap = sim.cap, N = 700, base = 80, amp = 1.5, yc = h / 2;
+      [[cap.x, P.dim, 1.2], [cap.est, P.dem, 1.6]].forEach((a) => {
+        g.strokeStyle = a[1]; g.lineWidth = a[2]; g.beginPath();
+        for (let i = 0; i < N; i++) { const x = i / (N - 1) * w, y = yc - clamp(a[0][base + i], -2.2, 2.2) / amp * (h * 0.4); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+      });
+      lbl(g, I18N.lang === 'fa' ? 'اصلی' : 'original', 6, 12, P.dim); lbl(g, I18N.lang === 'fa' ? 'بازیابی‌شده' : 'recovered', 6, 26, P.dem);
+    }
+  }
+
+  function drawCurve() {
+    const g = fit('cvB'); if (!g) return; const [w, h] = sizes.cvB; frame(g, w, h);
+    const px = 34, pb = 20, pw = w - px - 8, ph = h - pb - 8;
+    if (isDigital() && sim.curves) {
+      const bps = R.MODS[S.mod].bps, X = (db) => px + db / 25 * pw, Y = (ber) => 6 + clamp((Math.log10(ber) - -0.3) / (-6.5 - -0.3), 0, 1) * ph;
+      for (let e = 1; e <= 6; e++) { const y = Y(Math.pow(10, -e)); g.strokeStyle = P.grid; g.beginPath(); g.moveTo(px, y); g.lineTo(w - 8, y); g.stroke(); lbl(g, '1e−' + e, 2, y, P.dim); }
+      for (let d = 0; d <= 25; d += 5) lbl(g, String(d), X(d), h - 8, P.dim, 'center');
+      [['awgn', P.rx, []], ['ray', P.tx, [4, 3]]].forEach((c) => {
+        g.strokeStyle = c[1]; g.lineWidth = 1.6; g.setLineDash(c[2]); g.beginPath();
+        sim.curves[c[0]].forEach((v, i) => { const x = X(i * 0.5), y = Y(Math.max(v, 1e-7)); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); g.setLineDash([]);
+      });
+      const eb = clamp(sim.lb.snr - 10 * Math.log10(bps), 0, 25), yT = Y(Math.max(sim.berT, 1e-7));
+      g.strokeStyle = 'rgba(255,138,92,.5)'; g.beginPath(); g.moveTo(X(eb), 6); g.lineTo(X(eb), 6 + ph); g.stroke();
+      g.fillStyle = P.dem; g.beginPath(); g.arc(X(eb), yT, 5, 0, TAU); g.fill();
+      if (sim.bits && sim.errs) { g.strokeStyle = '#fff'; g.lineWidth = 1.6; g.beginPath(); g.arc(X(eb), Y(sim.errs / sim.bits), 5, 0, TAU); g.stroke(); }
+      lbl(g, 'Eb/N0 (dB)', w - 8, 14, P.txt, 'right'); lbl(g, 'AWGN', px + 6, 14, P.rx); lbl(g, 'Rayleigh', px + 58, 14, P.tx);
+    } else if (sim.sweep) {
+      const X = (db) => px + (db + 5) / 50 * pw, Y = (db) => 6 + (1 - (clamp(db, -20, 45) + 20) / 65) * ph;
+      for (let d = -20; d <= 40; d += 20) { g.strokeStyle = P.grid; g.beginPath(); g.moveTo(px, Y(d)); g.lineTo(w - 8, Y(d)); g.stroke(); lbl(g, String(d), 2, Y(d), P.dim); }
+      for (let d = 0; d <= 40; d += 10) lbl(g, String(d), X(d), h - 8, P.dim, 'center');
+      g.strokeStyle = P.dim; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(X(-5), Y(-5)); g.lineTo(X(45), Y(45)); g.stroke(); g.setLineDash([]);
+      g.strokeStyle = P.rx; g.lineWidth = 1.8; g.beginPath(); sim.sweep.forEach((p, i) => { const x = X(p[0]), y = Y(p[1]); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+      if (isFinite(sim.snrOut)) { g.fillStyle = P.dem; g.beginPath(); g.arc(X(clamp(sim.lb.snr, -5, 45)), Y(sim.snrOut), 5, 0, TAU); g.fill(); }
+      lbl(g, 'CNR in (dB)', w - 8, 14, P.txt, 'right'); lbl(g, 'SNR out (dB)', px + 6, 12, P.rx);
+    }
+  }
+
+  function tick(ms) {
+    if (!open) return;
+    if (ms - last > 90) { last = ms; try { stepSim(ms); drawScope(); drawSpectrum(); drawConst(); drawCurve(); updateLive(); } catch (e) { console.error(e); } }
+    raf = requestAnimationFrame(tick);
+  }
+
+  // ---------- public ----------
+  const Lab = {
+    open: function (presetId) {
+      if (!built) build();
+      opener = document.activeElement; root.hidden = false; open = true; document.body.classList.add('lab-open');
+      if (presetId && PRESETS[presetId]) applyPreset(presetId); else changed(true);
+      root.querySelectorAll('[data-i18n]').forEach((x) => { x.textContent = tt(x.dataset.i18n); });
+      changed(true); fitAll(); root.querySelector('.lab-close').focus();
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+    },
+    close: function () {
+      if (!open) return; open = false; root.hidden = true; document.body.classList.remove('lab-open'); cancelAnimationFrame(raf);
+      if (opener && opener.focus) opener.focus();
+    },
+    isOpen: function () { return open; },
+    relabel: function () {
+      if (!built) return;
+      root.querySelectorAll('[data-i18n]').forEach((x) => { x.textContent = tt(x.dataset.i18n); });
+      KNOBS.forEach((k) => knobCtl[k.key].render()); syncSeg(); updateCells();
+    }
+  };
+  window.Lab = Lab;
+})();
+
+  </script>
+  <script type="text/plain" id="src-city">
+/* city.js — the 3D diorama. Plain Three.js r128 (global THREE), no build step.
+ * Exposes window.City { init, select, trace, stopTrace, isTracing, refreshLabels }.
+ * Coordinates: platform spans x −23…23, z −19…19; north (−z) has the mountain. Y is up. */
+(function () {
+  'use strict';
+  if (!window.THREE) return;            // app.js shows a friendly message when Three.js is missing
+  const TAU = Math.PI * 2;
+  const T = window.THREE;
+  let scene, camera, renderer, canvas, labelsEl, cbs = {};
+  const clock = { t: 0 };
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const speedK = calm ? 0.25 : 1;
+
+  const COL = {
+    cream: 0xEDE3CC, beige: 0xD9CDB4, beige2: 0xC8BA9A, glass: 0x5A7DB0, glassD: 0x2F4670, wood: 0xD7995B,
+    green: 0x6AA45E, green2: 0x3F7A4A, road: 0xAEB7C6, orange: 0xE8602C, white: 0xF6F3EC, steel: 0x8E9BAE,
+    steelD: 0x5A667A, teal: 0x14909F, snow: 0xF2F0FA, rock: 0x5C6AA0, rock2: 0x7C86B5, dark: 0x26324A, yellow: 0xF2B84B, amber: 0xC98F10, volt: 0xFFD23F, gravel: 0xB9B3A3
+  };
+  const matCache = {};
+  function M(color, kind) {
+    const key = color + (kind || 'l');
+    if (!matCache[key]) {
+      matCache[key] = kind === 's' ? new T.MeshStandardMaterial({ color: color, flatShading: true, roughness: 0.95, metalness: 0 })
+        : kind === 'b' ? new T.MeshBasicMaterial({ color: color })
+        : new T.MeshLambertMaterial({ color: color });
+    }
+    return matCache[key];
+  }
+  function box(w, h, d, color, x, y, z, parent) {
+    const m = new T.Mesh(new T.BoxGeometry(w, h, d), M(color));
+    m.position.set(x || 0, (y || 0) + h / 2, z || 0); if (parent) parent.add(m); return m;
+  }
+  function cyl(rt, rb, h, color, x, y, z, parent, seg) {
+    const m = new T.Mesh(new T.CylinderGeometry(rt, rb, h, seg || 20), M(color));
+    m.position.set(x || 0, (y || 0) + h / 2, z || 0); if (parent) parent.add(m); return m;
+  }
+  function led(x, y, z, color, parent) {
+    const m = new T.Mesh(new T.BoxGeometry(0.16, 0.16, 0.16), new T.MeshBasicMaterial({ color: color }));
+    m.position.set(x, y, z); parent.add(m); return m;
+  }
+  function V(x, y, z) { return new T.Vector3(x, y, z); }
+  function rng(seed) { let s = seed >>> 0; return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+
+  // ---------- polyline helper ----------
+  function Path(points) {
+    this.pts = points; this.cum = [0];
+    for (let i = 1; i < points.length; i++) this.cum.push(this.cum[i - 1] + points[i].distanceTo(points[i - 1]));
+    this.len = this.cum[this.cum.length - 1];
+  }
+  Path.prototype.at = function (u, out) {
+    const d = Math.min(Math.max(u, 0), 1) * this.len;
+    let i = 1; while (i < this.cum.length - 1 && this.cum[i] < d) i++;
+    const a = this.pts[i - 1], b = this.pts[i], seg = this.cum[i] - this.cum[i - 1] || 1;
+    return out.copy(a).lerp(b, (d - this.cum[i - 1]) / seg);
+  };
+  function arcPoints(a, b, lift, n) {
+    const pts = [], mid = a.clone().add(b).multiplyScalar(0.5); mid.y += lift;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, p = new T.Vector3();
+      p.x = (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * mid.x + t * t * b.x;
+      p.y = (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * mid.y + t * t * b.y;
+      p.z = (1 - t) * (1 - t) * a.z + 2 * (1 - t) * t * mid.z + t * t * b.z;
+      pts.push(p);
+    }
+    return pts;
+  }
+
+  // ---------- registry ----------
+  const units = {};          // id → { group, anchor, ringR, ring, pin }
+  const pickRoots = [];
+  const flows = [];          // { path, dots[], speed, dir }
+  const rings = [];          // expanding wave rings
+  const blinkers = [];
+  const spinners = [];
+  let skySat, selected = null, hovered = null;
+  const hl = new Set();
+
+  function registerUnit(id, group, anchorY, ringR) {
+    group.userData.unit = id; scene.add(group); pickRoots.push(group);
+    const ring = new T.Mesh(new T.RingGeometry(ringR, ringR + 0.35, 48), new T.MeshBasicMaterial({ color: COL.orange, transparent: true, opacity: 0.9, side: T.DoubleSide }));
+    ring.rotation.x = -Math.PI / 2; ring.position.set(group.position.x, 0.09, group.position.z); ring.visible = false; scene.add(ring);
+    units[id] = { group: group, anchor: V(group.position.x, anchorY, group.position.z), ringR: ringR, ring: ring, pin: null };
+  }
+
+  function addWaveRings(parent, y, color, maxScale, count, period) {
+    for (let i = 0; i < count; i++) {
+      const m = new T.Mesh(new T.RingGeometry(0.92, 1, 56), new T.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.6, side: T.DoubleSide, depthWrite: false }));
+      m.rotation.x = -Math.PI / 2; m.position.y = y; parent.add(m);
+      rings.push({ m: m, max: maxScale, period: period, off: i / count });
+    }
+  }
+
+  function dish(radius, color, parent, pos, dir) {
+    const g = new T.Group();
+    const bowl = new T.Mesh(new T.SphereGeometry(radius, 24, 8, 0, TAU, 0, 0.8), new T.MeshLambertMaterial({ color: color, side: T.DoubleSide }));
+    bowl.scale.y = 0.5; g.add(bowl);
+    const stalk = new T.Mesh(new T.CylinderGeometry(radius * 0.04, radius * 0.04, radius * 0.7, 6), M(COL.steelD)); stalk.position.y = radius * 0.3; g.add(stalk);
+    const feed = new T.Mesh(new T.BoxGeometry(radius * 0.18, radius * 0.1, radius * 0.18), M(COL.dark)); feed.position.y = radius * 0.62; g.add(feed);
+    g.position.copy(pos); g.quaternion.setFromUnitVectors(V(0, 1, 0), dir.clone().normalize()); parent.add(g); return g;
+  }
+
+  // ---------- unit builders ----------
+  function buildDatacenter() {
+    const g = new T.Group(); g.position.set(-13, 0, -11);
+    box(9, 3.4, 5, COL.beige, 0, 0, 0, g);
+    box(9.1, 0.9, 5.1, COL.glassD, 0, 1.2, 0, g);
+    box(9.4, 0.25, 5.4, COL.steel, 0, 3.4, 0, g);
+    for (let i = 0; i < 4; i++) {                                    // rooftop chillers
+      const c = cyl(0.8, 0.8, 0.7, COL.steel, -3.2 + i * 2.1, 3.65, 0, g, 18);
+      cyl(0.62, 0.62, 0.06, COL.dark, c.position.x, 4.3, 0, g, 18);
+      spinners.push(cyl(0.55, 0.55, 0.04, COL.white, c.position.x, 4.37, 0, g, 4));
+    }
+    for (let i = 0; i < 3; i++) box(1.4, 1.2, 1.1, COL.orange, -3 + i * 3, 0, 3.4, g);   // generators
+    box(2, 1.6, 1.4, COL.steelD, 5.8, 0, 0, g);                      // substation
+    for (let i = 0; i < 14; i++) blinkers.push({ m: led(-4 + i * 0.6, 1.65, 2.58, COL.teal, g), ph: i * 1.3 });
+    return g;
+  }
+  function buildIxp() {
+    const g = new T.Group(); g.position.set(-3, 0, -12);
+    box(5, 4.4, 4, COL.glass, 0, 0, 0, g);
+    box(5.2, 0.3, 4.2, COL.white, 0, 4.4, 0, g);
+    for (let i = 0; i < 4; i++) box(0.5, 4.4, 0.08, COL.glassD, -1.8 + i * 1.2, 0, 2.02, g);
+    for (let i = 0; i < 3; i++) cyl(0.35, 0.35, 2.2, COL.steel, -1.4 + i * 1.4, 0, -2.6, g, 14).rotation.z = 0;   // cable risers
+    box(4.2, 0.3, 1.2, COL.steelD, 0, 0, -2.6, g);
+    dish(0.9, COL.white, g, V(1.4, 4.7, 0), V(0.3, 1, -0.7));
+    dish(0.7, COL.white, g, V(-1.4, 4.7, 0.3), V(-0.4, 1, -0.6));
+    for (let i = 0; i < 6; i++) blinkers.push({ m: led(-2 + i * 0.8, 3.7, 2.1, COL.yellow, g), ph: i * 0.9 });
+    return g;
+  }
+  function buildSatellite() {
+    const g = new T.Group(); g.position.set(-19, 0, -15);
+    cyl(0.9, 1.4, 0.6, COL.steelD, 0, 0, 0, g, 12);
+    cyl(0.35, 0.5, 2.6, COL.steel, 0, 0.6, 0, g, 10);
+    const d = dish(3, COL.white, g, V(0, 3.4, 0), V(0.1, 1, -0.3)); d.userData.main = true;
+    box(2.4, 1.6, 2, COL.beige, 3.6, 0, 1.6, g);
+    dish(0.9, COL.white, g, V(3.6, 1.9, 1.6), V(0.2, 1, -0.4));
+    box(0.9, 0.9, 0.9, COL.orange, -2.8, 0, 2, g);
+    return g;
+  }
+  function buildBroadcast() {
+    const g = new T.Group(); g.position.set(5, 0, -14);
+    cyl(3.6, 3.9, 0.6, COL.beige2, 0, 0, 0, g, 24);
+    cyl(0.55, 1.1, 15, COL.beige, 0, 0.6, 0, g, 20);
+    cyl(2.7, 1.1, 2.4, COL.glass, 0, 15.6, 0, g, 24);
+    cyl(2.7, 2.7, 0.35, COL.white, 0, 18, 0, g, 24);
+    cyl(1.5, 2.7, 1.1, COL.beige, 0, 18.35, 0, g, 24);
+    const stripes = [COL.orange, COL.white, COL.orange, COL.white];
+    for (let i = 0; i < 4; i++) cyl(0.12 + 0.05 * (3 - i) * 0.4, 0.2 + 0.05 * (3 - i) * 0.4, 2.2, stripes[i], 0, 19.4 + i * 2.2, 0, g, 8);
+    blinkers.push({ m: led(0, 28.5, 0, COL.orange, g), ph: 0, solo: true });
+    addWaveRings(g, 17, COL.orange, 11, 3, 3.6);
+    return g;
+  }
+  function buildMicrowave() {
+    const g = new T.Group(); g.position.set(16, 0, -11);
+    const lattice = new T.Mesh(new T.CylinderGeometry(0.35, 1.5, 12, 4, 6, true), new T.MeshBasicMaterial({ color: COL.orange, wireframe: true }));
+    lattice.position.y = 6; lattice.rotation.y = Math.PI / 4; g.add(lattice);
+    box(2.4, 1.4, 1.8, COL.beige, 2.8, 0, 1.4, g);
+    dish(1.1, COL.white, g, V(-0.3, 10.2, 0.9), V(-1, 0.25, 0.9));     // toward exchange (south-west)
+    dish(1.1, COL.white, g, V(0.5, 8.4, 1.2), V(0, 0.2, 1));           // toward cell tower (south)
+    box(0.6, 0.6, 0.6, COL.white, 0, 12, 0, g);
+    return g;
+  }
+  function buildExchange() {
+    const g = new T.Group(); g.position.set(0, 0, 0);
+    box(9, 4.6, 6, COL.beige, 0, 0, 0, g);
+    box(9.4, 0.4, 6.4, COL.white, 0, 4.6, 0, g);
+    for (let i = 0; i < 6; i++) box(0.35, 4.6, 0.35, COL.cream, -3.8 + i * 1.52, 0, 3.15, g);
+    box(2.2, 2.4, 0.15, COL.glassD, 0, 0, 3.02, g);
+    [-3.4, -2.2, 2.2, 3.4].forEach((wx) => box(0.8, 1.2, 0.1, COL.glass, wx, 2.4, 3.05, g));
+    box(2, 1.6, 2, COL.steelD, 6, 0, -1.4, g);                       // battery room
+    box(1.6, 1.2, 1.2, COL.orange, 6, 0, 1.6, g);                    // generator
+    cyl(0.14, 0.2, 4.6, COL.steel, 0, 5, 0, g, 8);                   // mast
+    dish(0.8, COL.white, g, V(0.2, 8.2, 0), V(1, 0.1, -1.1));
+    dish(0.6, COL.white, g, V(-0.2, 7, 0), V(0.5, 0.3, -1));
+    for (let i = 0; i < 8; i++) blinkers.push({ m: led(-3.6 + i * 1, 4.1, 3.24, COL.teal, g), ph: i * 0.7 });
+    return g;
+  }
+  function buildCell() {
+    const g = new T.Group(); g.position.set(15, 0, 0);
+    cyl(0.28, 0.45, 10, COL.steel, 0, 0, 0, g, 12);
+    for (let i = 0; i < 3; i++) {                                    // 3 sector panels
+      const a = i * TAU / 3 + 0.5, px = Math.cos(a) * 0.7, pz = Math.sin(a) * 0.7;
+      const p = box(0.9, 2.6, 0.18, COL.white, px, 8, pz, g); p.rotation.y = -a + Math.PI / 2;
+      const r = box(0.5, 0.8, 0.3, COL.steelD, px * 1.4, 6.6, pz * 1.4, g); r.rotation.y = -a + Math.PI / 2;
+    }
+    box(0.5, 0.5, 0.5, COL.orange, 0, 10, 0, g);
+    box(2.6, 1.8, 2, COL.beige, 2.8, 0, 1.6, g);
+    box(3.6, 0.1, 3.0, COL.steel, 2.8, 0, 1.6, g).position.y = 0.05;
+    addWaveRings(g, 8, COL.teal, 7, 3, 3);
+    return g;
+  }
+  function buildFiberNode() {
+    const g = new T.Group(); g.position.set(-8, 0, -6);
+    cyl(1.9, 1.9, 0.35, COL.steelD, 0, 0, 0, g, 28);
+    cyl(1.3, 1.3, 0.1, COL.dark, 0, 0.35, 0, g, 28);
+    const torus = new T.Mesh(new T.TorusGeometry(2.4, 0.09, 8, 64), new T.MeshBasicMaterial({ color: COL.teal }));
+    torus.rotation.x = Math.PI / 2; torus.position.y = 1.4; g.add(torus);
+    const cols = [0xE8602C, 0x14909F, 0xF2B84B, 0x7A5CE0];
+    for (let i = 0; i < 4; i++) {
+      const s = new T.Mesh(new T.SphereGeometry(0.22, 10, 8), new T.MeshBasicMaterial({ color: cols[i] }));
+      s.userData.ph = i / 4; g.add(s); spinners.push({ sphere: s, torus: true, y: 1.4, r: 2.4 });
+    }
+    box(0.9, 1.2, 0.7, COL.steel, 2.6, 0, 0, g);                    // ODF cabinet
+    return g;
+  }
+  function buildCabinet() {
+    const g = new T.Group(); g.position.set(-14, 0, 9);
+    box(1.6, 1.9, 1, COL.steel, 0, 0, 0, g);
+    box(0.7, 1.6, 0.06, COL.steelD, -0.38, 0.15, 0.53, g); box(0.7, 1.6, 0.06, COL.steelD, 0.38, 0.15, 0.53, g);
+    box(1.8, 0.14, 1.2, COL.beige2, 0, 1.9, 0, g);
+    const r = rng(11);
+    for (let i = 0; i < 6; i++) {                                    // homes served by the splitter
+      const a = i * TAU / 6 + 0.4, d = 4.6 + r() * 0.6, x = Math.cos(a) * d, z = Math.sin(a) * d;
+      const h = new T.Group(); h.position.set(x, 0, z); h.rotation.y = r() * 3;
+      box(2, 1.5, 2, i % 2 ? COL.cream : COL.beige, 0, 0, 0, h);
+      const roof = new T.Mesh(new T.ConeGeometry(1.8, 1, 4), M(i % 2 ? COL.wood : COL.orange)); roof.position.y = 2; roof.rotation.y = Math.PI / 4; h.add(roof);
+      g.add(h);
+    }
+    for (let i = 0; i < 4; i++) blinkers.push({ m: led(-0.5 + i * 0.33, 1.7, 0.54, COL.teal, g), ph: i * 1.1 });
+    return g;
+  }
+  function buildUser() {
+    const g = new T.Group(); g.position.set(0, 0, 12);
+    box(3.6, 2.4, 3.2, COL.cream, 0, 0, -1.4, g);
+    const roof = new T.Mesh(new T.ConeGeometry(3.1, 1.6, 4), M(COL.orange)); roof.position.set(0, 3.2, -1.4); roof.rotation.y = Math.PI / 4; g.add(roof);
+    box(0.8, 0.8, 0.1, COL.glass, -0.9, 0.9, 0.22, g); box(0.9, 1.5, 0.1, COL.wood, 0.9, 0, 0.22, g);
+    box(0.45, 0.35, 0.2, COL.teal, 1.9, 0.9, 0.2, g);                // ONT on the wall
+    const plinth = cyl(3, 3.1, 0.3, COL.beige2, 0, 0, 3.4, g, 28);
+    const lap = new T.Group(); lap.position.set(-1, 0.3, 3.4); lap.rotation.y = 0.3;
+    box(2.2, 0.12, 1.5, COL.steelD, 0, 0, 0, lap);
+    const scr = box(2.2, 1.4, 0.1, COL.dark, 0, 0, -0.75, lap); scr.rotation.x = -0.25; scr.position.y = 0.85; scr.position.z = -0.8;
+    const glow = box(1.95, 1.15, 0.05, COL.glass, 0, 0, -0.7, lap); glow.rotation.x = -0.25; glow.position.set(0, 0.87, -0.74);
+    g.add(lap);
+    const ph = box(0.55, 1.0, 0.1, COL.dark, 1.7, 0.3, 3.7, g); ph.rotation.set(-0.5, -0.3, 0);
+    const scr2 = box(0.44, 0.84, 0.04, COL.glass, 1.7, 0.4, 3.75, g); scr2.rotation.set(-0.5, -0.3, 0); scr2.position.set(1.7, 0.78, 3.7);
+    addWaveRings(g, 1.4, COL.teal, 4, 2, 2.4);
+    return g;
+  }
+
+  // ---------- power system (generation → transmission → distribution → telecom sites) ----------
+  const plumes = [];
+  function pylon(x, z) {
+    const g = new T.Group(); g.position.set(x, 0, z);
+    const lat = new T.Mesh(new T.CylinderGeometry(0.25, 1.1, 9, 4, 5, true), new T.MeshBasicMaterial({ color: COL.steelD, wireframe: true }));
+    lat.position.y = 4.5; lat.rotation.y = Math.PI / 4; g.add(lat);
+    [6.3, 7.4, 8.5].forEach((y) => box(3, 0.12, 0.12, COL.steelD, 0, y - 0.06, 0, g));
+    return g;
+  }
+  function buildPlant() {
+    const g = new T.Group(); g.position.set(31, 0, -11);
+    box(8, 3.4, 3.6, COL.beige, -1, 0, -1.2, g); box(8.2, 0.3, 3.8, COL.steel, -1, 3.4, -1.2, g);
+    box(7.4, 0.9, 0.08, COL.glassD, -1, 1.5, 0.62, g);
+    box(2, 2.6, 2, COL.steel, -5.6, 0, -1.2, g);                            // gas-turbine air intake
+    [-2.4, 0.6].forEach((z) => {                                           // heat-recovery boilers + stacks
+      box(2.2, 5.2, 2.2, COL.steelD, 4, 0, z, g); cyl(0.5, 0.65, 11, COL.white, 4, 5.2, z, g, 16); cyl(0.52, 0.52, 0.5, COL.orange, 4, 14.6, z, g, 16);
+      plumes.push({ m: new T.Mesh(new T.SphereGeometry(0.5, 8, 6), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, depthWrite: false })), base: V(4, 16.3, z), off: Math.random(), g: g });
+    });
+    box(3, 2.4, 2.4, COL.beige2, 0.5, 0, 3.2, g);                           // steam-turbine hall
+    const pts = []; for (let i = 0; i <= 10; i++) pts.push(new T.Vector2(2.2 - 0.9 * Math.sin(Math.PI * i / 10), i * 0.8));
+    const tower = new T.Mesh(new T.LatheGeometry(pts, 28), new T.MeshLambertMaterial({ color: COL.white, side: T.DoubleSide })); tower.position.set(-5, 0, 4.8); g.add(tower);
+    plumes.push({ m: new T.Mesh(new T.SphereGeometry(0.9, 8, 6), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, depthWrite: false })), base: V(-5, 8.4, 4.8), off: 0.3, g: g });
+    box(2, 1.8, 1.4, COL.steelD, -3, 0, 5.4, g);                            // step-up transformer
+    for (let i = 0; i < 3; i++) cyl(0.1, 0.1, 0.9, COL.white, -3.6 + i * 0.6, 1.8, 5.4, g, 8);
+    [-3.8, -2.2].forEach((x) => cyl(0.12, 0.12, 5.2, COL.steel, x, 0, 6.2, g, 8)); box(2.2, 0.16, 0.16, COL.steel, -3, 5.2, 6.2, g);
+    for (let i = 0; i < 5; i++) blinkers.push({ m: led(-4.5 + i * 1.8, 3.7, 0.7, COL.yellow, g), ph: i });
+    plumes.forEach((p) => { if (p.g === g) g.add(p.m); });
+    return g;
+  }
+  function buildHvSub() {
+    const g = new T.Group(); g.position.set(31, 0, 4.5);
+    box(9, 0.06, 8, COL.gravel, 0, 0, 0, g);
+    for (let i = 0; i < 3; i++) {
+      const x = -3 + i * 3;
+      box(2, 2.2, 1.6, COL.steelD, x, 0.06, 0.8, g); box(0.5, 1.7, 1.3, COL.steel, x + 1.25, 0.2, 0.8, g);
+      for (let j = 0; j < 3; j++) cyl(0.1, 0.1, 0.9, COL.white, x - 0.6 + j * 0.6, 2.26, 0.8, g, 8);
+      cyl(0.18, 0.18, 1.4, COL.white, x, 0.06, -1.6, g, 10);                // circuit breaker
+    }
+    [-4, 0, 4].forEach((x) => cyl(0.12, 0.12, 5.5, COL.steel, x, 0, -3.2, g, 8)); box(8.4, 0.18, 0.18, COL.steel, 0, 5.5, -3.2, g);
+    cyl(0.12, 0.12, 5.5, COL.steel, -4.4, 0, 4.5, g, 8); box(0.18, 0.18, 2, COL.steel, -4.4, 5.5, 4.5, g);
+    box(2.4, 1.6, 2, COL.beige, 3.2, 0, 3.0, g);                           // control building
+    for (let i = 0; i < 4; i++) blinkers.push({ m: led(2.4 + i * 0.5, 1.2, 4.02, COL.teal, g), ph: i * 1.2 });
+    return g;
+  }
+  function buildDistSub() {
+    const g = new T.Group(); g.position.set(18.5, 0, 13.5);
+    box(5, 0.06, 5, COL.gravel, 0, 0, 0, g);
+    box(1.8, 1.8, 1.4, COL.steelD, -0.9, 0.06, 0.3, g); for (let j = 0; j < 3; j++) cyl(0.09, 0.09, 0.8, COL.white, -1.4 + j * 0.5, 1.86, 0.3, g, 8);
+    box(2, 1.8, 3, COL.beige, 1.4, 0, 0, g);
+    cyl(0.12, 0.12, 5, COL.steel, 2.6, 0, -1.5, g, 8); box(0.16, 0.16, 1.6, COL.steel, 2.6, 5, -1.5, g);
+    cyl(0.09, 0.12, 5, COL.wood, -3.2, 0, -2.4, g, 6); box(1.6, 0.1, 0.1, COL.wood, -3.2, 4.6, -2.4, g); cyl(0.32, 0.32, 0.8, COL.steelD, -3.2, 3.6, -2.4, g, 12);
+    for (let i = 0; i < 3; i++) blinkers.push({ m: led(0.8 + i * 0.5, 1.2, 1.52, COL.yellow, g), ph: i * 2 });
+    return g;
+  }
+  function buildSolar() {
+    const g = new T.Group(); g.position.set(31, 0, 14);
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) {
+      const p = box(2.2, 0.1, 1.3, COL.glassD, -3.75 + c * 2.5, 0, -1.4 + r * 2.4, g); p.position.y = 1.0; p.rotation.x = -0.5;
+      cyl(0.06, 0.06, 0.9, COL.steel, p.position.x, 0, p.position.z, g, 6);
+    }
+    box(1.4, 1.2, 1, COL.white, -4.6, 0, 2.6, g);                          // inverter
+    cyl(0.15, 0.3, 8, COL.white, 4.3, 0, -4.8, g, 10); box(0.5, 0.5, 1, COL.white, 4.3, 8, -4.8, g);
+    const rotor = new T.Group(); rotor.position.set(4.3, 8.25, -4.2);
+    for (let i = 0; i < 3; i++) { const b = box(0.2, 3.4, 0.05, COL.white, 0, 0, 0, rotor); b.position.y = 1.7; const pv = new T.Group(); pv.rotation.z = i * TAU / 3; pv.add(b); rotor.add(pv); }
+    g.add(rotor); spinners.push(Object.assign(rotor, { zspin: true }));
+    return g;
+  }
+  function buildSitePower() {
+    const g = new T.Group(); g.position.set(12, 0, 12);
+    box(3.4, 2.2, 2.2, 0x6E86A8, 0, 0, 0, g); box(0.9, 1.6, 0.08, COL.steelD, -0.8, 0, 1.12, g);
+    for (let i = 0; i < 2; i++) { const p = box(1.4, 0.08, 0.9, COL.glassD, -0.8 + i * 1.6, 2.2, 0, g); p.rotation.x = -0.4; }
+    box(2, 1.3, 1.2, COL.orange, 3.2, 0, 0, g); cyl(0.12, 0.12, 2.2, COL.dark, 3.8, 1.3, -0.3, g, 8);
+    const tank = cyl(0.45, 0.45, 1.8, COL.steel, 3.2, 0, 1.7, g, 14); tank.rotation.z = Math.PI / 2; tank.position.y = 0.5;
+    cyl(0.09, 0.12, 5, COL.wood, -3, 0, -1.2, g, 6); box(1.4, 0.1, 0.1, COL.wood, -3, 4.6, -1.2, g); cyl(0.3, 0.3, 0.7, COL.steelD, -3, 3.6, -1.2, g, 12);
+    for (let i = 0; i < 3; i++) blinkers.push({ m: led(0.6 + i * 0.5, 1.9, 1.14, COL.teal, g), ph: i * 1.7 });
+    return g;
+  }
+
+  // overhead lines: nodes are {x,z,y0,dy}; three conductors at y0, y0+dy, y0+2·dy
+  const powerPaths = {};
+  function overhead(nodes, id) {
+    const mid = [];
+    for (let k = 0; k < 3; k++) {
+      const pts = [];
+      for (let i = 1; i < nodes.length; i++) {
+        const a = nodes[i - 1], b = nodes[i];
+        arcPoints(V(a.x, a.y0 + k * a.dy, a.z), V(b.x, b.y0 + k * b.dy, b.z), -0.5, 10).forEach((p, j) => { if (!(i > 1 && j === 0)) pts.push(p); });
+      }
+      const line = new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x24324B })); scene.add(line);
+      if (k === 1) mid.push(pts);
+    }
+    powerPaths[id] = mid[0]; addFlow(new Path(mid[0]), COL.volt, 1, 8, 0.3);
+  }
+  function definePower() {
+    const y = 0.3, net = new T.Group(); net.userData.unit = 'distsub'; scene.add(net); pickRoots.push(net);
+    const P2 = {
+      dsSit: [V(16, y, 13.6), V(13.8, y, 12.4)],
+      dsCell: [V(19.8, y, 11), V(19.8, y, 3.4), V(18.6, y, 2.7)],
+      dsEx: [V(17.4, y, 11), V(17.4, y, 7.2), V(6.2, y, 7.2), V(6.2, y, 2.5)],
+      exDc: [V(6.8, y, -2.5), V(6.8, y, -8.2), V(-12.2, y, -8.2), V(-12.2, y, -8.0)],
+      solDs: [V(27, y, 13.4), V(23.4, y, 13.4), V(21.2, y, 13.6)]
+    };
+    Object.keys(P2).forEach((k) => {
+      const pts = P2[k]; powerPaths[k] = pts;
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i], len = a.distanceTo(b);
+        const s = new T.Mesh(new T.BoxGeometry(len + 0.2, 0.12, 0.26), M(COL.amber)); s.position.copy(a).add(b).multiplyScalar(0.5); s.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); net.add(s);
+        const hit = new T.Mesh(new T.BoxGeometry(len + 0.4, 1, 1.4), new T.MeshBasicMaterial({ visible: false })); hit.position.copy(s.position); hit.rotation.copy(s.rotation); net.add(hit);
+      }
+      addFlow(new Path(pts), COL.volt, 1, 5, 0.26);
+    });
+    const hv = new T.Group(); hv.userData.unit = 'hvsub'; scene.add(hv); pickRoots.push(hv);
+    [[31, -3.2], [24.2, 6.4], [22.8, 9.4]].forEach((p) => hv.add(pylon(p[0], p[1])));
+    overhead([{ x: 31, z: -6.2, y0: 5.2, dy: 0.25 }, { x: 31, z: -3.2, y0: 6.3, dy: 1.1 }, { x: 31, z: 1.3, y0: 5.2, dy: 0.25 }], 'ov1');
+    overhead([{ x: 26.6, z: 4.5, y0: 5.2, dy: 0.25 }, { x: 24.2, z: 6.4, y0: 6.3, dy: 1.1 }, { x: 22.8, z: 9.4, y0: 6.3, dy: 1.1 }, { x: 21.1, z: 12, y0: 5, dy: 0.2 }], 'ov2');
+  }
+
+  // ---------- environment ----------
+  function buildGround() {
+    const side = M(COL.wood), top = M(COL.cream);
+    const plat = new T.Mesh(new T.BoxGeometry(60, 1.4, 38), [side, side, top, side, side, side]);
+    plat.position.set(7, -0.7, 0); scene.add(plat);
+    [-6, 6].forEach((z) => box(60, 0.05, 1.8, COL.road, 7, 0, z, scene));
+    [-8, 8, 24].forEach((x) => box(1.8, 0.05, 38, COL.road, x, 0, 0, scene));
+    const dash = M(COL.white);
+    for (let x = -22; x < 36; x += 2.4) [-6, 6].forEach((z) => { const m = new T.Mesh(new T.BoxGeometry(1, 0.02, 0.08), dash); m.position.set(x, 0.06, z); scene.add(m); });
+    for (let z = -18; z < 18; z += 2.4) [-8, 8, 24].forEach((x) => { const m = new T.Mesh(new T.BoxGeometry(0.08, 0.02, 1), dash); m.position.set(x, 0.06, z); scene.add(m); });
+  }
+  function buildMountains() {
+    function peak(x, z, R, H, snowFrac) {
+      const g = new T.Group(); g.position.set(x, -0.7, z);
+      const body = new T.Mesh(new T.ConeGeometry(R, H, 7, 1), M(COL.rock, 's')); body.position.y = H / 2; body.rotation.y = 0.4; g.add(body);
+      if (snowFrac) {
+        const h = H * snowFrac, r = R * snowFrac;
+        const cap = new T.Mesh(new T.ConeGeometry(r * 1.02, h, 7, 1), M(COL.snow, 's')); cap.position.y = H - h / 2 + 0.02; cap.rotation.y = 0.4; g.add(cap);
+      }
+      scene.add(g);
+    }
+    peak(0, -38, 20, 19, 0.36);        // Damavand-like cone
+    peak(-24, -32, 11, 9, 0.18);
+    peak(25, -32, 13, 10, 0.2);
+    peak(-34, -22, 9, 6, 0);
+    peak(35, -22, 9, 6.5, 0);
+    peak(41, -30, 12, 8.5, 0.16);
+    peak(46, -16, 8, 5.5, 0);
+  }
+  function buildFillers() {
+    const avoid = [[-13, -11, 6.2], [-19, -15, 5.2], [-3, -12, 4.8], [5, -14, 4.4], [16, -11, 4.8], [0, 0, 7.4], [15, 0, 5], [-14, 9, 7.6], [0, 12, 5.6], [-8, -6, 2.6], [18.5, 13.5, 5], [12, 12, 4]];
+    const r = rng(2024), step = 4.4;
+    for (let x = -20.5; x < 22; x += step) for (let z = -16.5; z < 19; z += step) {
+      if (Math.abs(x + 8) < 2.3 || Math.abs(x - 8) < 2.3 || Math.abs(z + 6) < 2.3 || Math.abs(z - 6) < 2.3) continue;
+      if (avoid.some((a) => Math.hypot(x - a[0], z - a[1]) < a[2])) continue;
+      const px = x + (r() - 0.5) * 0.8, pz = z + (r() - 0.5) * 0.8, roll = r();
+      if (roll < 0.3) {                                              // small park
+        box(3.6, 0.06, 3.6, COL.green, px, 0, pz, scene);
+        for (let i = 0; i < 4; i++) {
+          const tx = px + (r() - 0.5) * 2.6, tz = pz + (r() - 0.5) * 2.6;
+          cyl(0.08, 0.12, 0.6, COL.wood, tx, 0, tz, scene, 5);
+          const cone = new T.Mesh(new T.ConeGeometry(0.55, 1.5, 7), M(COL.green2)); cone.position.set(tx, 1.3, tz); scene.add(cone);
+        }
+      } else {
+        const downtown = x < 0 && z > -4 && z < 12;
+        const w = 2.2 + r() * 1.4, d = 2.2 + r() * 1.4, h = downtown ? 2.5 + r() * 7 : 1.4 + r() * 3.2;
+        const glass = r() < 0.4;
+        box(w, h, d, glass ? COL.glass : (r() < 0.5 ? COL.beige : COL.cream), px, 0, pz, scene);
+        box(w + 0.1, 0.18, d + 0.1, COL.white, px, h, pz, scene);
+      }
+    }
+  }
+  function buildSkySat() {
+    const g = new T.Group(); g.position.set(-17, 26, -22);
+    box(1.2, 1.2, 1.6, COL.yellow, 0, -0.6, 0, g);
+    box(3.2, 0.06, 1.2, COL.glass, -2.4, 0, 0, g); box(3.2, 0.06, 1.2, COL.glass, 2.4, 0, 0, g);
+    dish(0.5, COL.white, g, V(0, 0.65, 0.6), V(0.2, 0.5, 1));
+    scene.add(g); skySat = g;
+  }
+
+  // ---------- links ----------
+  const P = {};
+  function defineLinks() {
+    const y = 0.32;
+    P.userCab = [V(0, y, 8.6), V(0, y, 6.7), V(-13.4, y, 6.7), V(-13.4, y, 8.3)];
+    P.cabEx = [V(-14.4, y, 8.3), V(-14.4, y, 6), V(0, y, 6), V(0, y, 3.2)];
+    P.exDc = [V(0, y, -3.2), V(0, y, -5.3), V(-13, y, -5.3), V(-13, y, -8.7)];
+    P.dcIx = [V(-13.8, y, -8.7), V(-13.8, y, -6.2), V(-3, y, -6.2), V(-3, y, -9.8)];
+    P.ixSat = [V(-2.2, y, -9.8), V(-2.2, y, -6.9), V(-8.5, y, -6.9), V(-8.5, y, -14), V(-16.2, y, -14)];
+
+    const colors = { fiber: COL.teal };
+    const net = new T.Group(); net.userData.unit = 'fiber'; scene.add(net); pickRoots.push(net);
+    Object.keys(P).forEach((k) => {
+      const pts = P[k];
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i], len = a.distanceTo(b);
+        const s = new T.Mesh(new T.BoxGeometry(len + 0.22, 0.13, 0.3), M(colors.fiber)); s.position.copy(a).add(b).multiplyScalar(0.5);
+        s.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); net.add(s);
+        const hit = new T.Mesh(new T.BoxGeometry(len + 0.4, 1, 1.4), new T.MeshBasicMaterial({ visible: false })); hit.position.copy(s.position); hit.rotation.copy(s.rotation); net.add(hit);
+      }
+      addFlow(new Path(pts), COL.teal, 1, 6);
+      addFlow(new Path(pts.slice().reverse()), COL.orange, 1, 4.5);
+    });
+    // wireless backhaul/radio links (dashed arcs + moving pulses)
+    wireless(V(15, 10.2, 0), V(0.8, 3.2, 12.2), 4);
+    wireless(V(16, 11.6, -11), V(15, 10.4, 0), 3);
+    wireless(V(15.8, 11, -11), V(0.5, 9.6, 0), 5);
+    wireless(V(-18.2, 3.9, -15.6), V(-17, 25.5, -22), 0);
+    definePower();
+  }
+  function wireless(a, b, lift) {
+    const pts = arcPoints(a, b, lift, 28), geo = new T.BufferGeometry().setFromPoints(pts);
+    const line = new T.Line(geo, new T.LineDashedMaterial({ color: COL.orange, dashSize: 0.5, gapSize: 0.4 })); line.computeLineDistances(); scene.add(line);
+    addFlow(new Path(pts), COL.orange, 1, 7, 0.3);
+    addFlow(new Path(pts.slice().reverse()), COL.teal, 1, 7, 0.3);
+  }
+  function addFlow(path, color, _d, speed, size) {
+    const n = Math.max(2, Math.round(path.len / 7)), dots = [];
+    for (let i = 0; i < n; i++) {
+      const m = new T.Mesh(new T.SphereGeometry(size || 0.26, 8, 6), new T.MeshBasicMaterial({ color: color })); scene.add(m); dots.push(m);
+    }
+    flows.push({ path: path, dots: dots, speed: speed, off: Math.random() });
+  }
+
+  // ---------- camera ----------
+  const cam = { theta: 0.72, phi: 1.0, r: 84, target: V(7, 1, 0), gTarget: V(7, 1, 0), gR: 84, ix: 0, iy: 0, gix: 0, giy: 0 };
+  function updateCamera(dt) {
+    const k = 1 - Math.exp(-dt * 5);
+    cam.target.lerp(cam.gTarget, k); cam.r += (cam.gR - cam.r) * k;
+    const s = Math.sin(cam.phi);
+    camera.position.set(cam.target.x + cam.r * s * Math.sin(cam.theta), cam.target.y + cam.r * Math.cos(cam.phi), cam.target.z + cam.r * s * Math.cos(cam.theta));
+    camera.lookAt(cam.target); camera.updateMatrixWorld();
+    cam.ix += (cam.gix - cam.ix) * k; cam.iy += (cam.giy - cam.iy) * k;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (w && h && (Math.abs(cam.ix) > 1e-3 || Math.abs(cam.iy) > 1e-3)) camera.setViewOffset(w, h, -cam.ix * w, cam.iy * h, w, h);
+    else if (camera.view && camera.view.enabled) camera.clearViewOffset();
+  }
+  function bindInput() {
+    const ptrs = new Map(); let moved = 0, downAt = null, pinch0 = 0, pinchR0 = 0;
+    canvas.addEventListener('pointerdown', (e) => {
+      canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, b: e.button });
+      moved = 0; downAt = { x: e.clientX, y: e.clientY };
+      if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); pinchR0 = cam.gR; }
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      const p = ptrs.get(e.pointerId);
+      if (!p) { hoverPick(e.clientX, e.clientY); return; }
+      const dx = e.clientX - p.x, dy = e.clientY - p.y; moved += Math.abs(dx) + Math.abs(dy);
+      if (ptrs.size === 2) {
+        p.x = e.clientX; p.y = e.clientY; const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch0 > 0) cam.gR = clamp(pinchR0 * pinch0 / d, 14, 150);
+        return;
+      }
+      p.x = e.clientX; p.y = e.clientY;
+      if (p.b === 2 || e.shiftKey) pan(dx, dy);
+      else { cam.theta -= dx * 0.006; cam.phi = clamp(cam.phi - dy * 0.005, 0.25, 1.45); }
+    });
+    const up = (e) => {
+      const had = ptrs.delete(e.pointerId);
+      if (had && ptrs.size === 0 && moved < 6 && downAt) pick(e.clientX, e.clientY, true);
+      pinch0 = 0;
+    };
+    canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', (e) => { ptrs.delete(e.pointerId); });
+    canvas.addEventListener('wheel', (e) => { e.preventDefault(); cam.gR = clamp(cam.gR * Math.exp(e.deltaY * 0.0012), 14, 150); }, { passive: false });
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    canvas.addEventListener('pointerleave', () => setHover(null));
+  }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function pan(dx, dy) {
+    const k = cam.r * 0.0016, fx = -Math.sin(cam.theta), fz = -Math.cos(cam.theta), rx = Math.cos(cam.theta), rz = -Math.sin(cam.theta);
+    const mx = (-dx * rx + dy * fx) * k, mz = (-dx * rz + dy * fz) * k;
+    cam.gTarget.x = clamp(cam.gTarget.x + mx, -26, 40); cam.gTarget.z = clamp(cam.gTarget.z + mz, -22, 22);
+    cam.target.copy(cam.gTarget);
+  }
+
+  // ---------- picking ----------
+  const ray = { rc: null, v: null };
+  function pickAt(cx, cy) {
+    const r = canvas.getBoundingClientRect();
+    ray.v.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+    ray.rc.setFromCamera(ray.v, camera);
+    const hits = ray.rc.intersectObjects(pickRoots, true);
+    for (const h of hits) { let o = h.object; while (o && !o.userData.unit) o = o.parent; if (o) return o.userData.unit; }
+    return null;
+  }
+  function hoverPick(x, y) { setHover(pickAt(x, y)); }
+  function pick(x, y) { const id = pickAt(x, y); if (cbs.onPick) cbs.onPick(id); }
+  function setHover(id) {
+    if (id === hovered) return; hovered = id; canvas.style.cursor = id ? 'pointer' : 'grab';
+    Object.keys(units).forEach((k) => { units[k].pin && units[k].pin.classList.toggle('hot', k === id); });
+  }
+
+  // ---------- labels ----------
+  function buildPins(names) {
+    labelsEl.textContent = '';
+    Object.keys(units).forEach((id) => {
+      const b = document.createElement('button'); b.className = 'pin'; b.type = 'button'; b.dataset.unit = id;
+      b.textContent = names(id); b.addEventListener('click', () => cbs.onPick && cbs.onPick(id));
+      b.addEventListener('pointerenter', () => setHover(id)); b.addEventListener('pointerleave', () => setHover(null));
+      labelsEl.appendChild(b); units[id].pin = b;
+    });
+    if (selected && units[selected]) units[selected].pin.classList.add('sel');
+    Object.keys(units).forEach((k) => { if (hl.size && !hl.has(k)) units[k].pin.classList.add('dim'); });
+  }
+  function updatePins() {
+    const w = canvas.clientWidth, h = canvas.clientHeight, v = new T.Vector3();
+    Object.keys(units).forEach((id) => {
+      const u = units[id]; if (!u.pin) return;
+      v.copy(u.anchor).project(camera);
+      const vis = v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15;
+      u.pin.style.display = vis ? '' : 'none';
+      if (vis) u.pin.style.transform = 'translate(' + ((v.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-v.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
+    });
+  }
+
+  // ---------- packet / power trace ----------
+  const tr = { on: false, kind: 'net', path: null, steps: [], t: 0, next: 0, mesh: null, glow: null };
+  function buildTrace(kind) {
+    const y = 0.32, pts = [], marks = [];
+    const bridge = (p) => { pts.push(p); };
+    function leg(list) { list.forEach((p, i) => { if (pts.length && i === 0 && pts[pts.length - 1].distanceTo(p) < 0.01) return; pts.push(p.clone()); }); }
+    const mark = (unit) => marks.push({ unit: unit, at: pts.length - 1 });
+    if (kind === 'power') {
+      pts.push(V(31, 4, -8)); marks.push({ unit: 'plant', at: 0 });
+      leg(powerPaths.ov1); mark('hvsub');
+      bridge(V(26.7, 5.2, 4.5)); leg(powerPaths.ov2); mark('distsub');
+      bridge(V(17.4, y, 11)); leg(powerPaths.dsEx); mark('exchange');
+      bridge(V(6.8, y, -2.5)); leg(powerPaths.exDc); mark('datacenter');
+    } else {
+      pts.push(V(0.8, 1.2, 12.5)); marks.push({ unit: 'user', at: 0 });
+      bridge(V(0, y, 8.6)); leg(P.userCab); bridge(V(-13.4, y, 8.6)); mark('cabinet');
+      bridge(V(-14.4, y, 8.6)); leg(P.cabEx); mark('exchange');
+      bridge(V(0, y, -3.2)); bridge(V(0, y, -5.3)); bridge(V(-8, y, -5.3)); mark('fiber');
+      bridge(V(-13, y, -5.3)); bridge(V(-13, y, -8.7)); mark('datacenter');
+      bridge(V(-13.8, y, -8.7)); leg(P.dcIx); mark('ixp');
+      bridge(V(-2.2, y, -9.8)); leg(P.ixSat); mark('satellite');
+      bridge(V(-18.2, 3.9, -15.6)); bridge(skySat.position.clone().add(V(0, 0.4, 0)));
+    }
+    return { pts: pts, marks: marks };
+  }
+  function startTrace(kind) {
+    if (tr.on) return;
+    kind = kind === 'power' ? 'power' : 'net';
+    const d = buildTrace(kind); tr.kind = kind;
+    tr.path = new Path(d.pts); tr.steps = d.marks.map((m) => ({ unit: m.unit, u: tr.path.cum[m.at] / tr.path.len }));
+    if (!tr.mesh) {
+      tr.mesh = new T.Mesh(new T.SphereGeometry(0.55, 14, 10), new T.MeshBasicMaterial({ color: 0xffffff }));
+      tr.glow = new T.Mesh(new T.SphereGeometry(0.95, 14, 10), new T.MeshBasicMaterial({ color: COL.orange, transparent: true, opacity: 0.45, depthWrite: false }));
+      scene.add(tr.mesh); scene.add(tr.glow);
+    }
+    tr.glow.material.color.setHex(kind === 'power' ? COL.volt : COL.orange);
+    tr.mesh.visible = tr.glow.visible = true; tr.on = true; tr.t = 0; tr.next = 0; fireStep(0);
+  }
+  function fireStep(i) { tr.next = i + 1; if (cbs.onTraceStep) cbs.onTraceStep(i, tr.steps[i].unit, tr.steps.length, tr.kind); }
+  function stopTrace(silent) {
+    if (!tr.on) return; tr.on = false; if (tr.mesh) tr.mesh.visible = tr.glow.visible = false;
+    if (!silent && cbs.onTraceEnd) cbs.onTraceEnd();
+  }
+  function updateTrace(dt) {
+    if (!tr.on) return;
+    tr.t += dt * (calm ? 3 : 6) / tr.path.len;                 // 6 world-units per second
+    const p = tr.path.at(Math.min(tr.t, 1), tr.mesh.position); tr.glow.position.copy(p);
+    tr.glow.scale.setScalar(1 + 0.15 * Math.sin(clock.t * 8));
+    cam.gTarget.set(p.x, 1, p.z);
+    if (tr.next < tr.steps.length && tr.t >= tr.steps[tr.next].u) fireStep(tr.next);
+    if (tr.t >= 1) stopTrace();
+  }
+
+  // ---------- frame loop ----------
+  function frame(ms) {
+    const dt = Math.min(0.05, (ms - (frame.last || ms)) / 1000); frame.last = ms; clock.t += dt;
+    const t = clock.t;
+    flows.forEach((f) => {
+      f.dots.forEach((m, i) => { f.path.at(((t * f.speed * speedK / f.path.len) + f.off + i / f.dots.length) % 1, m.position); });
+    });
+    rings.forEach((r) => {
+      const u = ((t * speedK / r.period) + r.off) % 1; r.m.scale.setScalar(1 + u * r.max); r.m.material.opacity = 0.65 * (1 - u);
+    });
+    blinkers.forEach((b) => { b.m.visible = b.solo ? (Math.sin(t * 3) > -0.2) : Math.sin(t * 5 + b.ph * 7) > -0.25; });
+    spinners.forEach((s) => {
+      if (s.torus) { const a = t * 1.1 * speedK + s.sphere.userData.ph * TAU; s.sphere.position.set(Math.cos(a) * s.r, s.y, Math.sin(a) * s.r); }
+      else if (s.zspin) s.rotation.z = t * 1.6 * speedK;
+      else if (s.rotation) s.rotation.y = t * 4 * speedK;
+    });
+    plumes.forEach((p) => { const u = ((t * 0.22 * speedK) + p.off) % 1; p.m.position.set(p.base.x, p.base.y + u * 5, p.base.z); p.m.scale.setScalar(0.6 + u * 1.7); p.m.material.opacity = 0.45 * (1 - u); });
+    if (skySat) skySat.position.y = 26 + Math.sin(t * 0.6) * 0.4;
+    Object.keys(units).forEach((id) => {
+      const u = units[id], on = id === selected || id === hovered || hl.has(id); u.ring.visible = on;
+      if (on) { const s = id === selected ? 1 + 0.06 * Math.sin(t * 4) : 1; u.ring.scale.setScalar(s); u.ring.material.opacity = id === selected ? 0.95 : 0.55; }
+    });
+    updateTrace(dt); updateCamera(dt); updatePins();
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  function resize() {
+    const w = canvas.clientWidth, h = canvas.clientHeight; if (!w || !h) return;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+    if (w < 700) cam.gR = Math.max(cam.gR, 135);
+  }
+
+  // ---------- public ----------
+  const City = {
+    init: function (opts) {
+      canvas = opts.canvas; labelsEl = opts.labels; cbs = opts;
+      renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true }); renderer.setClearColor(0x000000, 0);
+      scene = new T.Scene(); camera = new T.PerspectiveCamera(32, 1, 0.5, 400);
+      scene.add(new T.HemisphereLight(0xffffff, 0xb9a98a, 0.85));
+      const sun = new T.DirectionalLight(0xfff0d8, 0.85); sun.position.set(-22, 34, 18); scene.add(sun);
+      ray.rc = new T.Raycaster(); ray.v = new T.Vector2();
+      buildGround(); buildMountains();
+      registerUnit('datacenter', buildDatacenter(), 7, 6);
+      registerUnit('ixp', buildIxp(), 6.6, 3.8);
+      registerUnit('satellite', buildSatellite(), 7, 4.6);
+      registerUnit('broadcast', buildBroadcast(), 30.5, 4.4);
+      registerUnit('microwave', buildMicrowave(), 13.6, 3.6);
+      registerUnit('exchange', buildExchange(), 9.4, 6.3);
+      registerUnit('cell', buildCell(), 11.6, 3.8);
+      registerUnit('fiber', buildFiberNode(), 3.4, 3.2);
+      registerUnit('cabinet', buildCabinet(), 4, 2.4);
+      registerUnit('user', buildUser(), 5.2, 4.6);
+      registerUnit('plant', buildPlant(), 17.5, 7);
+      registerUnit('hvsub', buildHvSub(), 7.4, 5.4);
+      registerUnit('distsub', buildDistSub(), 6.4, 3.9);
+      registerUnit('solar', buildSolar(), 9.6, 5.8);
+      registerUnit('sitepower', buildSitePower(), 5.4, 3.4);
+      buildFillers(); buildSkySat(); defineLinks();
+      buildPins(opts.names); bindInput(); resize();
+      window.addEventListener('resize', resize);
+      canvas.style.cursor = 'grab';
+      requestAnimationFrame(frame);
+    },
+    select: function (id, focus) {
+      if (selected && units[selected] && units[selected].pin) units[selected].pin.classList.remove('sel');
+      selected = id;
+      if (id && units[id]) {
+        if (units[id].pin) units[id].pin.classList.add('sel');
+        if (focus) { const a = units[id].group.position; cam.gTarget.set(a.x, 2, a.z); cam.gR = Math.min(cam.gR, 38); }
+      }
+    },
+    relabel: function (names) { buildPins(names); },
+    trace: startTrace,
+    highlight: function (ids) {
+      hl.clear(); (ids || []).forEach((i) => hl.add(i));
+      Object.keys(units).forEach((k) => { if (units[k].pin) units[k].pin.classList.toggle('dim', hl.size > 0 && !hl.has(k)); });
+    },
+    setInset: function (dx, dy) { cam.gix = dx || 0; cam.giy = dy || 0; },
+    stopTrace: function () { stopTrace(); },
+    isTracing: function () { return tr.on; },
+    resetView: function () { cam.gTarget.set(7, 1, 0); cam.gR = canvas.clientWidth < 700 ? 135 : 84; }
+  };
+  window.City = City;
+})();
+
+  </script>
+  <script type="text/plain" id="src-app">
+/* app.js — glue between the 3D city, the unit panel, the tracers, the report and the radio lab. */
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const byId = {}; window.UNITS.forEach((u) => { byId[u.id] = u; });
+  const pick = (o) => I18N.iso(I18N.pick(o));
+  let current = null, tracing = false, traceKind = 'net', traceIdx = -1, layerId = null;
+
+  const names = (id) => I18N.iso(I18N.pick(byId[id].name).replace(/\s*\(.*\)\s*$/, ''));
+  const traceData = () => (traceKind === 'power' ? window.TRACE_POWER : window.TRACE);
+
+  function buildChips() {
+    const nav = $('chips'); nav.textContent = '';
+    window.UNITS.forEach((u) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.unit = u.id;
+      if (u.layer === 'power') b.classList.add('pw');
+      b.textContent = names(u.id); b.addEventListener('click', () => openUnit(u.id));
+      b.setAttribute('aria-pressed', u.id === current); nav.appendChild(b);
+    });
+  }
+
+  function updateInset() {
+    if (!current) { window.City.setInset(0, 0); return; }
+    if (window.innerWidth < 700) window.City.setInset(0, 0.26);
+    else window.City.setInset(I18N.lang === 'fa' ? 0.17 : -0.17, 0);
+  }
+
+  // ---- calculator ----
+  function renderCalc(u) {
+    const wrap = $('pCalcWrap'), box = $('pCalc'); box.textContent = '';
+    if (!u.calc) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    const title = document.createElement('p'); title.className = 'calc-title'; title.textContent = pick(u.calc.title); box.appendChild(title);
+    const vals = {}, outs = [];
+    function recompute() { outs.forEach((o) => { o.el.textContent = o.def.fn(vals); }); }
+    u.calc.inputs.forEach((inp) => {
+      vals[inp.id] = inp.val;
+      const row = document.createElement('label'); row.className = 'crow';
+      const name = document.createElement('span'); name.textContent = pick(inp.label);
+      const val = document.createElement('output'); val.textContent = inp.val + ' ' + inp.unit;
+      const r = document.createElement('input'); r.type = 'range'; r.min = inp.min; r.max = inp.max; r.step = inp.step; r.value = inp.val;
+      r.addEventListener('input', () => { vals[inp.id] = parseFloat(r.value); val.textContent = r.value + ' ' + inp.unit; recompute(); });
+      row.append(name, val, r); box.appendChild(row);
+    });
+    const res = document.createElement('div'); res.className = 'cres';
+    u.calc.outs.forEach((o) => {
+      const cell = document.createElement('div'); const l = document.createElement('span'); l.textContent = pick(o.label);
+      const v = document.createElement('strong'); cell.append(l, v); res.appendChild(cell); outs.push({ def: o, el: v });
+    });
+    box.appendChild(res);
+    if (u.calc.note) { const n = document.createElement('p'); n.className = 'fine'; n.textContent = pick(u.calc.note); box.appendChild(n); }
+    recompute();
+  }
+
+  function renderPanel() {
+    if (!current) return;
+    const u = byId[current];
+    $('pCat').textContent = pick(u.cat); $('pName').textContent = pick(u.name); $('pDesc').textContent = pick(u.desc);
+    $('pAnimCap').textContent = pick(u.anim);
+    const dl = $('pSpecs'); dl.textContent = '';
+    u.specs.forEach((s) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = pick(s.k); dd.textContent = pick(s.v); dl.append(dt, dd); });
+    const ul = $('pModels'); ul.textContent = '';
+    u.models.forEach((m) => { const li = document.createElement('li'); li.textContent = pick(m); ul.appendChild(li); });
+    const fl = $('pFacts'); fl.textContent = ''; const facts = u.facts || [];
+    $('pFactsWrap').hidden = !facts.length;
+    facts.forEach((f) => { const li = document.createElement('li'); li.textContent = pick(f.text) + '  [' + f.src.join(', ') + ']'; fl.appendChild(li); });
+    renderCalc(u);
+    $('btnOpenRadio').hidden = !u.preset;
+    $('panel').scrollTop = 0;
+  }
+
+  function openUnit(id, fromTrace) {
+    if (!id) { closePanel(); return; }
+    if (tracing && !fromTrace) stopTrace();
+    current = id; $('panel').hidden = false; renderPanel(); updateInset();
+    window.City.select(id, !fromTrace);
+    window.UnitAnim.start($('pCanvas'), id);
+    document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', c.dataset.unit === id));
+    const act = document.querySelector('.chip[aria-pressed="true"]'); if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }
+  function closePanel() {
+    current = null; $('panel').hidden = true; window.UnitAnim.stop(); window.City.select(null); updateInset();
+    document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', 'false'));
+  }
+
+  // ---- tracers ----
+  function stopTrace() { tracing = false; traceIdx = -1; window.City.stopTrace(); $('traceBar').hidden = true; setTraceBtn(); }
+  function setTraceBtn() {
+    $('btnTrace').textContent = I18N.t(tracing && traceKind === 'net' ? 'traceStop' : 'trace'); $('btnTrace').setAttribute('aria-pressed', tracing && traceKind === 'net');
+    $('btnTracePower').textContent = I18N.t(tracing && traceKind === 'power' ? 'traceStop' : 'tracePower'); $('btnTracePower').setAttribute('aria-pressed', tracing && traceKind === 'power');
+  }
+  function renderTrace() {
+    if (traceIdx < 0) return;
+    const s = traceData()[traceIdx];
+    $('traceStep').textContent = (traceIdx + 1) + ' / ' + traceData().length; $('traceUnit').textContent = names(s.unit); $('traceText').textContent = pick(s.text);
+  }
+  function toggleTrace(kind) {
+    if (tracing) { const same = traceKind === kind; stopTrace(); if (same) return; }
+    traceKind = kind; tracing = true; setTraceBtn(); clearLayer(); window.City.trace(kind);
+  }
+
+  // ---- layer highlight ----
+  function showLayer(id) {
+    const l = window.REPORT.layers.find((x) => x.id === id); if (!l) return;
+    layerId = id; window.City.highlight(l.units); $('layerName').textContent = I18N.t('layerShown') + ': ' + I18N.iso(I18N.pick(l.name)); $('layerBar').hidden = false;
+  }
+  function clearLayer() { layerId = null; window.City.highlight([]); $('layerBar').hidden = true; }
+
+  // ---- report modal ----
+  function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+  function renderReport() {
+    const R = window.REPORT, root = $('report'); root.textContent = '';
+    const shell = el('div', 'report-shell'); shell.setAttribute('role', 'dialog'); shell.setAttribute('aria-modal', 'true'); shell.setAttribute('aria-labelledby', 'repTitle');
+    const head = el('header', 'report-head'); const h = el('h2', null, pick(R.title)); h.id = 'repTitle';
+    const close = el('button', 'report-close', I18N.t('close')); close.type = 'button'; close.addEventListener('click', closeReport); head.append(h, close);
+    const body = el('div', 'report-body'); body.appendChild(el('p', 'lead', pick(R.intro)));
+
+    body.appendChild(el('h3', null, I18N.t('layersT')));
+    R.layers.forEach((l) => {
+      const card = el('div', 'rlayer'); card.append(el('strong', null, pick(l.name)), el('p', null, pick(l.text)));
+      const row = el('div', 'rrow'); l.units.forEach((u) => row.appendChild(el('span', 'tag', names(u))));
+      const go = el('button', null, I18N.t('showInCity')); go.type = 'button'; go.addEventListener('click', () => { closeReport(); if (tracing) stopTrace(); showLayer(l.id); });
+      card.append(row, go); body.appendChild(card);
+    });
+    body.appendChild(el('h3', null, I18N.t('factsT')));
+    const fu = el('ul', 'facts'); R.facts.forEach((f) => { const li = el('li', null, pick(f.text) + '  [' + f.src.join(', ') + ']'); li.appendChild(el('small', null, ' — ' + pick(f.note))); fu.appendChild(li); }); body.appendChild(fu);
+    body.appendChild(el('h3', null, I18N.t('actorsT')));
+    const au = el('ul'); R.actors.forEach((a) => { const li = el('li'); li.append(el('strong', null, pick(a.name)), document.createTextNode(': ' + pick(a.text))); au.appendChild(li); }); body.appendChild(au);
+    body.appendChild(el('h3', null, I18N.t('kpisT')));
+    const ku = el('ul'); R.kpis.forEach((k) => ku.appendChild(el('li', null, pick(k)))); body.appendChild(ku);
+    body.appendChild(el('h3', null, I18N.t('sourcesT')));
+    const su = el('ol', 'srcs');
+    R.sources.forEach((s) => { const li = el('li'); li.value = s.n; const a = el('a', null, pick(s.t)); a.href = s.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; li.appendChild(a); su.appendChild(li); });
+    body.appendChild(su); body.appendChild(el('p', 'fine', pick(R.limits)));
+    shell.append(head, body); root.appendChild(shell);
+  }
+  let repOpener = null;
+  function openReport() { repOpener = document.activeElement; renderReport(); $('report').hidden = false; document.body.classList.add('lab-open'); $('report').querySelector('.report-close').focus(); }
+  function closeReport() { $('report').hidden = true; document.body.classList.remove('lab-open'); if (repOpener && repOpener.focus) repOpener.focus(); }
+
+  function relabelAll() {
+    buildChips(); window.City.relabel(names); renderPanel(); setTraceBtn(); renderTrace(); updateInset();
+    $('btnLang').textContent = I18N.t('lang'); if (window.Lab) window.Lab.relabel();
+    if (!$('report').hidden) renderReport();
+    if (layerId) showLayer(layerId);
+    if (current) window.UnitAnim.start($('pCanvas'), current);
+  }
+
+  function start() {
+    let saved = null; try { saved = localStorage.getItem('mokhaberat.lang'); } catch (e) { /* ignore */ }
+    I18N.set(saved === 'en' || saved === 'fa' ? saved : 'fa');
+    if (!window.THREE) { $('loading').textContent = I18N.t('noGL'); $('loading').classList.add('err'); return; }
+    try {
+      window.City.init({
+        canvas: $('stage'), labels: $('labels'), names: names,
+        onPick: (id) => openUnit(id),
+        onTraceStep: (i, unit, total, kind) => { traceKind = kind; traceIdx = i; $('traceBar').hidden = false; renderTrace(); openUnit(unit, true); },
+        onTraceEnd: () => { stopTrace(); }
+      });
+    } catch (e) { console.error(e); $('loading').textContent = I18N.t('noGL'); $('loading').classList.add('err'); return; }
+    buildChips(); setTraceBtn(); $('btnLang').textContent = I18N.t('lang');
+    $('loading').hidden = true;
+
+    $('btnLang').addEventListener('click', () => I18N.set(I18N.lang === 'fa' ? 'en' : 'fa'));
+    $('btnTrace').addEventListener('click', () => toggleTrace('net'));
+    $('btnTracePower').addEventListener('click', () => toggleTrace('power'));
+    $('btnReport').addEventListener('click', openReport);
+    $('btnRadio').addEventListener('click', () => window.Lab.open());
+    $('btnOpenRadio').addEventListener('click', () => { const u = byId[current]; window.Lab.open(u && u.preset); });
+    $('pClose').addEventListener('click', () => { if (tracing) stopTrace(); closePanel(); });
+    $('traceStop').addEventListener('click', stopTrace);
+    $('layerClear').addEventListener('click', clearLayer);
+    $('btnHome').addEventListener('click', () => { if (tracing) stopTrace(); clearLayer(); closePanel(); window.City.resetView(); });
+    window.addEventListener('langchange', relabelAll);
+    window.addEventListener('resize', updateInset);
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (window.Lab && window.Lab.isOpen()) window.Lab.close(); else if (!$('report').hidden) closeReport(); else if (tracing) stopTrace(); else if (layerId) clearLayer(); else if (current) closePanel();
+    });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) window.UnitAnim.stop(); else if (current) window.UnitAnim.start($('pCanvas'), current); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+  </script>
+  <script>
+/* loader.js — loads Three.js without ever leaving the page stuck on "loading".
+ * Order: local copy (js/vendor/three.min.js) → jsDelivr → cdnjs → unpkg, each with a timeout.
+ * Then city.js and app.js are loaded. If everything fails, a clear message is shown. */
+(function () {
+  'use strict';
+  const SOURCES = [
+    'three.min.js', 'js/vendor/three.min.js',
+    'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+    'https://unpkg.com/three@0.128.0/build/three.min.js'
+  ];
+  const box = () => document.getElementById('loading');
+  function say(t, err) { const b = box(); if (b) { b.textContent = t; b.classList.toggle('err', !!err); } }
+  function load(src, ms) {
+    return new Promise(function (res, rej) {
+      const s = document.createElement('script'); let done = false;
+      const t = setTimeout(function () { if (!done) { done = true; rej(new Error('timeout')); } }, ms);
+      s.onload = function () { if (!done) { done = true; clearTimeout(t); res(); } };
+      s.onerror = function () { if (!done) { done = true; clearTimeout(t); rej(new Error('error')); } };
+      s.src = src; document.head.appendChild(s);
+    });
+  }
+  function runInline(id) { var s = document.createElement('script'); s.text = document.getElementById(id).textContent; document.head.appendChild(s); }
+  async function getThree() {
+    for (const src of SOURCES) {
+      if (window.THREE) return true;
+      say(I18N.t('loading') + '  (' + (src.indexOf('http') === 0 ? new URL(src).hostname : 'local') + ')');
+      try { await load(src, src.indexOf('http') === 0 ? 7000 : 3000); } catch (e) { /* try next source */ }
+    }
+    return !!window.THREE;
+  }
+  getThree().then(function (ok) {
+    if (!ok) { say(I18N.t('noGL'), true); return; }
+    say(I18N.t('loading'));
+    runInline('src-city'); runInline('src-app');
+  }).catch(function (e) { console.error(e); say(I18N.t('noGL'), true); });
+})();
+
+  </script>
+</body>
+</html>

@@ -37,6 +37,12 @@ css.textContent=`
 #aList .bd{padding:0 12px 10px;font-size:13.5px;color:var(--bone)}
 #aList .bd p{margin:3px 0}#aList .bd ul{margin:4px 0 0;padding-inline-start:20px;color:var(--amber)}
 .aAct{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#aInv{display:grid;gap:10px}#aInv h2{margin:4px 0 0;font-size:20px}
+#aInv details{background:var(--panel);border-radius:10px;padding:2px 12px}#aInv summary{min-height:44px;display:flex;align-items:center;font-weight:800;cursor:pointer}
+#aInv input[type=number]{font:inherit;color:inherit;background:var(--ink);border:1px solid var(--rust);border-radius:8px;padding:8px;width:100%;min-height:44px}
+#aInv .aSm{font-size:12.5px;color:var(--dim);margin:6px 0}#aInv .aT{display:flex;gap:10px;align-items:center;min-height:40px;font-size:14px}.aT input{width:22px;height:22px;accent-color:var(--signal)}
+#ancGo{width:100%;min-height:56px;font-weight:800;margin-top:6px}#ancStat{font-size:14px;min-height:3.4em;margin:6px 0}
+#ancPlot{width:100%;height:90px;background:#000;border-radius:8px;display:block}
 #aToast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--bone);color:var(--ink);
   padding:10px 16px;border-radius:10px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:90vw}
 #aToast.on{opacity:1}
@@ -55,6 +61,24 @@ app.innerHTML=`<div class="in">
  <div class="aTabs"><button id="tAll" aria-pressed="true">همه</button><button id="tMag" aria-pressed="false">مغناطیس</button><button id="tSnd" aria-pressed="false">صدا</button></div>
  <ul id="aList"></ul>
  <div class="aAct"><button id="aJson">خروجی JSON</button><button id="aCsv">خروجی CSV</button><button id="aClear">پاک کردن</button></div>
+ <section id="aInv">
+  <h2>وارونه‌ی صدا</h2>
+  <details open id="ancSec"><summary>۱) ضدصدا: وارونه‌سازی فاز یک تُن ثابت</summary>
+   <p class="aSm">ضدصدا موجی هم‌دامنه و با فاز ۱۸۰ درجه تولید می‌کند تا تُن مزاحم را در نقطه‌ی میکروفون خنثی کند. اپ ابتدا فرکانس دقیق تُن را از میکروفون می‌گیرد، مسیر بلندگو تا میکروفون را با یک تُن کوچک شناسایی می‌کند و بعد فاز و دامنه را زنده تنظیم می‌کند. فقط تُن ثابت (وز دستگاه، هوم، سوت) خنثی می‌شود، نه گفتار یا صدای نامنظم. ناحیه‌ی آرام حدود یک‌دهم طول‌موج است (برای ۳۰۰ هرتز نزدیک ۱۱ سانتی‌متر دور میکروفون).</p>
+   <label class="aRow"><span>فرکانس (هرتز)</span><input id="ancF" type="number" min="80" max="2500" step="0.1" placeholder="مثلاً ۳۰۰"><button id="ancLast">آخرین رویداد</button></label>
+   <label class="aRow"><span>حداکثر شدت تُن</span><input id="ancVol" type="range" min="5" max="50" step="1" value="30"><b id="ancVolV">۳۰٪</b></label>
+   <button id="ancGo" aria-pressed="false">شروع ضدصدا</button>
+   <div id="ancStat" aria-live="polite">آماده. گوشی را کنار منبع تُن بگذار.</div>
+   <canvas id="ancPlot"></canvas>
+   <p class="aSm">ایمنی: صدای رسانه را متوسط نگه دار، گوشی را کنار گوش یا هدفون نگذار و هر وقت خواستی «توقف» را بزن (بعد از ۱۰ دقیقه خودکار قطع می‌شود). بلندگوی گوشی زیر حدود ۲۰۰ هرتز ضعیف است و آنجا کاهش کم می‌شود. اگر بلندگو به سقف برسد، اپ هشدار می‌دهد.</p>
+  </details>
+  <details id="silSec"><summary>۲) سکوت غیرعادی (وارونه‌ی ناهنجاری)</summary>
+   <p class="aSm">برعکس ثبت صدای غیرعادی: بازه‌ی فرکانسی‌ای که نسبت به حالت عادی چند ثانیه ساکت‌تر شده ثبت می‌شود، با تاریخ، ساعت، افت بر حسب دسی‌بل و علل محتمل. خاموش شدن یک دستگاه یا ساکت شدن ناگهانی جانداران شب (حشره، قورباغه) نمونه‌اند. برای کار کردن، ثبت صوتی باید روشن باشد و محیط چند ثانیه کالیبره شود.</p>
+   <label class="aT"><input id="silOn" type="checkbox" checked><span>ثبت سکوت غیرعادی</span></label>
+   <label class="aRow"><span>افت لازم</span><input id="silThr" type="range" min="4" max="20" step="1" value="8"><b id="silThrV">۸ dB</b></label>
+   <label class="aRow"><span>حداقل مدت سکوت</span><input id="silDur" type="range" min="2" max="30" step="1" value="4"><b id="silDurV">۴ ثانیه</b></label>
+  </details>
+ </section>
  <p style="margin:0;font-size:12.5px;color:var(--dim)">علت‌ها فقط حدس آماری‌اند و قطعی نیستند. گوشی نمی‌تواند طوفان ژئومغناطیسی را ببیند؛ فقط منابع نزدیک (آهنربا، فلز، موتور) را تشخیص می‌دهد. برای ثبت پیوسته، صفحه باید روشن بماند.</p>
 </div><div id="aToast"></div>`;
 document.body.appendChild(app);
@@ -84,7 +108,7 @@ function stamp(ts){
 }
 
 /* ---------- حسگرها ---------- */
-const ST={running:false,MD:null,SD:null,thrM:10,thrS:12,rawOk:false,mic:null,micCtx:null,an:null,fb:null,timer:null,mag:null,
+const ST={running:false,MD:null,SD:null,thrM:10,thrS:12,silOn:true,silThr:8,silDur:4,ancOn:false,QD:null,rawOk:false,mic:null,micCtx:null,an:null,fb:null,timer:null,mag:null,
   live:{B:null,H:null,lvl:null},wake:null,events:[],filter:'all',lastSound:{}};
 function emit(ev){
   const ts=Math.round(T0+ev.t*1000);
@@ -94,7 +118,7 @@ function emit(ev){
   const rec={kind:ev.kind,...stamp(ts),data:ev};
   DB.add(rec).then(id=>{rec.id=id;ST.events.unshift(rec);render();DB.trim(1000)}).catch(()=>{});
   if(navigator.vibrate)navigator.vibrate(ev.kind==='sound'?[60]:[40,40,40]);
-  toast(ev.kind==='mag'?'ناهنجاری مغناطیسی ثبت شد':ev.kind==='heading'?'انحراف قطب‌نما ثبت شد':'ناهنجاری صوتی ثبت شد');
+  toast(ev.kind==='mag'?'ناهنجاری مغناطیسی ثبت شد':ev.kind==='silence'?'سکوت غیرعادی ثبت شد':ev.kind==='heading'?'انحراف قطب‌نما ثبت شد':'ناهنجاری صوتی ثبت شد');
 }
 function onMotion(e){
   const r=e.rotationRate,a=e.acceleration;
@@ -143,10 +167,13 @@ async function startMic(){
     C.createMediaStreamSource(ST.mic).connect(an);
     ST.fb=new Float32Array(an.frequencyBinCount);
     ST.SD=new AC.SoundDetector({sampleRate:C.sampleRate,fftSize:4096,thr:ST.thrS,onEvent:emit});
+    ST.QD=new AC.QuietDetector({edges:ST.SD.edges,thr:ST.silThr,minDur:ST.silDur,onEvent:emit});
     ST.timer=setInterval(()=>{
       an.getFloatFrequencyData(ST.fb);const f=ST.fb;let pk=-200;
       for(let i=0;i<f.length;i++){if(!(f[i]>-120))f[i]=-120;if(f[i]>pk)pk=f[i]}
-      ST.live.lvl=pk;ST.SD.push(nowS(),f);
+      ST.live.lvl=pk;
+      if(ST.ancOn)return;               // هنگام ضدصدا، تُن خودمان نباید ثبت شود
+      ST.SD.push(nowS(),f);if(ST.QD&&ST.silOn)ST.QD.push(nowS(),ST.SD.v);
     },125);
   }catch{ST.mic=null}
 }
@@ -209,7 +236,7 @@ function live(){
 function line(parent,text){const p=document.createElement('p');p.textContent=text;parent.appendChild(p)}
 function render(){
   const ul=$('#aList');ul.innerHTML='';
-  const list=ST.events.filter(e=>ST.filter==='all'||(ST.filter==='mag'&&e.kind!=='sound')||(ST.filter==='snd'&&e.kind==='sound'));
+  const list=ST.events.filter(e=>ST.filter==='all'||(ST.filter==='mag'&&(e.kind==='mag'||e.kind==='heading'))||(ST.filter==='snd'&&(e.kind==='sound'||e.kind==='silence')));
   if(!list.length){const li=document.createElement('li');li.style.padding='12px';li.textContent='هنوز رویدادی ثبت نشده.';ul.appendChild(li);return}
   for(const e of list.slice(0,200)){
     const d=e.data,li=document.createElement('li');if(e.kind==='sound')li.className='snd';
@@ -217,6 +244,7 @@ function render(){
     let title;
     if(e.kind==='mag')title='مغناطیسی: تغییر '+fa(d.peak)+' µT، '+fa(d.dur,1)+' ثانیه';
     else if(e.kind==='heading')title='قطب‌نما: انحراف '+fa(d.delta)+' درجه';
+    else if(e.kind==='silence')title='سکوت غیرعادی: '+fa(d.fLow)+' تا '+fa(d.fHigh)+' هرتز ساکت شد (افت '+fa(d.dropDb)+' dB، '+fa(d.dur,1)+' ثانیه)';
     else title='صدا ('+CLS[d.cls]+'): '+fa(d.fLow)+' تا '+fa(d.fHigh)+' هرتز، اوج '+fa(d.peakF)+' هرتز';
     const top=d.causes&&d.causes[0]?'  ← محتمل‌ترین: '+d.causes[0].t+' ('+fa(d.causes[0].p)+'٪)':'';
     sm.textContent=title+top;
@@ -232,6 +260,11 @@ function render(){
       line(bd,d.moving?'هم‌زمان با حرکت گوشی':'گوشی ثابت بود');
     }else if(e.kind==='heading'){
       line(bd,'جهت جدید: '+fa(d.to)+'° در حالی که گوشی ثابت بود');
+    }else if(e.kind==='silence'){
+      line(bd,'بازه‌ی فرکانسی ساکت‌شده: '+fa(d.fLow)+' تا '+fa(d.fHigh)+' هرتز، اوج افت در '+fa(d.peakF)+' هرتز');
+      line(bd,'سطح عادی '+fa(d.baseDb,1)+' dBFS، افت '+fa(d.dropDb,1)+' دسی‌بل، مدت '+fa(d.dur,1)+' ثانیه');
+      line(bd,(d.abrupt?'قطع ناگهانی':'کاهش تدریجی')+'، سهم باندهای ساکت‌شده: '+fa(d.broadFrac*100)+'٪ از طیف');
+      if(d.clusters.length>1)line(bd,'بازه‌های دیگر: '+d.clusters.slice(1).map(c=>fa(c.fLow)+' تا '+fa(c.fHigh)+' هرتز').join('، '));
     }else{
       line(bd,'بازه‌ی فرکانسی اصلی: '+fa(d.fLow)+' تا '+fa(d.fHigh)+' هرتز (پهنا '+fa(d.bwOct,1)+' اکتاو)');
       line(bd,'فرکانس اوج: '+fa(d.peakF)+' هرتز، '+fa(d.peakEx)+' دسی‌بل بالاتر از محیط، مدت '+fa(d.dur,1)+' ثانیه');
@@ -241,6 +274,11 @@ function render(){
     }
     if(d.causes&&d.causes.length){const t=document.createElement('p');t.textContent='علل محتمل (تخمین، نه قطعی):';bd.appendChild(t);
       const u=document.createElement('ul');for(const c of d.causes){const x=document.createElement('li');x.style.background='none';x.style.borderInline='0';x.textContent=fa(c.p)+'٪ '+c.t;u.appendChild(x)}bd.appendChild(u)}
+    if(e.kind==='sound'&&d.peakF>=80&&d.peakF<=2500){
+      const b=document.createElement('button');b.textContent='ضدصدا برای این فرکانس ('+fa(d.peakF)+' هرتز)';b.style.cssText='margin-top:8px;min-height:44px';
+      b.onclick=()=>{$('#ancF').value=d.peakF;$('#ancSec').open=true;$('#ancSec').scrollIntoView({behavior:'smooth',block:'center'});toast('فرکانس در بخش ضدصدا قرار گرفت')};
+      bd.appendChild(b);
+    }
     det.appendChild(bd);li.appendChild(det);ul.appendChild(li);
   }
 }
@@ -264,20 +302,92 @@ $('#aCsv').onclick=()=>{
   if(!ST.events.length)return toast('رویدادی نیست');
   const q=s=>'"'+String(s).replace(/"/g,'""')+'"',rows=[['id','تاریخ','روز','ساعت','نوع','شدت','بازه_فرکانسی_هرتز','فرکانس_اوج','مدت_ثانیه','علت_محتمل','احتمال_درصد']];
   for(const e of ST.events){const d=e.data,c=d.causes&&d.causes[0]||{t:'',p:''};
-    rows.push([e.id,e.date,e.day,e.time,e.kind==='mag'?'مغناطیس':e.kind==='heading'?'قطب‌نما':'صدا',
-      e.kind==='mag'?d.peak.toFixed(1)+' µT':e.kind==='heading'?d.delta.toFixed(0)+' درجه':d.peakEx+' dB',
-      e.kind==='sound'?d.fLow+'-'+d.fHigh:'',e.kind==='sound'?d.peakF:'',d.dur.toFixed(1),c.t,c.p])}
+    rows.push([e.id,e.date,e.day,e.time,e.kind==='mag'?'مغناطیس':e.kind==='heading'?'قطب‌نما':e.kind==='silence'?'سکوت':'صدا',
+      e.kind==='mag'?d.peak.toFixed(1)+' µT':e.kind==='heading'?d.delta.toFixed(0)+' درجه':e.kind==='silence'?d.dropDb+' dB':d.peakEx+' dB',
+      (e.kind==='sound'||e.kind==='silence')?d.fLow+'-'+d.fHigh:'',(e.kind==='sound'||e.kind==='silence')?d.peakF:'',d.dur.toFixed(1),c.t,c.p])}
   download(fname('csv'),'\ufeff'+rows.map(r=>r.map(q).join(',')).join('\n'),'text/csv;charset=utf-8');
 };
 $('#aClear').onclick=async()=>{if(!confirm('همه‌ی رویدادهای ثبت‌شده پاک شود؟'))return;await DB.clear();ST.events=[];render()};
 
 /* ---------- رویدادهای رابط ---------- */
+/* ---------- وارونه‌ی صدا ---------- */
+const ANC={ctx:null,node:null,stream:null,C:null,vol:.3,f0:null,f:null,state:'idle',timer:null};
+const ancMsg=t=>{$('#ancStat').textContent=t};
+function ancPlot(){
+  const cv=$('#ancPlot'),w=cv.clientWidth,h=cv.clientHeight,dpr=Math.min(2,devicePixelRatio||1);
+  if(!w)return;cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
+  g.strokeStyle='#6b2f27';g.lineWidth=1;g.beginPath();g.moveTo(0,h*.5);g.lineTo(w,h*.5);g.stroke();
+  const H=ANC.C?ANC.C.hist.slice(-80):[];if(H.length<2)return;
+  g.strokeStyle='#ffb23e';g.lineWidth=2;g.beginPath();
+  H.forEach((v,i)=>{const x=i/(H.length-1)*w,y=h-clamp(v/40,0,1)*h;i?g.lineTo(x,y):g.moveTo(x,y)});g.stroke();
+}
+function ancRender(C){
+  let t='';
+  if(C.state==='D')t='۱ از ۳: اندازه‌گیری تُن در میکروفون…';
+  else if(C.state==='P')t='۲ از ۳: شناسایی مسیر بلندگو تا میکروفون…';
+  else if(C.state==='L'){
+    const amp=Math.hypot(C.S[0],C.S[1])/C.maxAmp;
+    t='۳ از ۳: ضدصدا فعال · کاهش '+fa(C.red||0,1)+' dB · توان بلندگو '+fa(amp*100)+'٪ از سقف'+(C.sat?' · بلندگو به سقف رسید؛ شدت را بالا ببر یا نزدیک‌تر شو':'');
+  }else if(C.state==='fail')t='ناموفق: '+C.why;
+  ancMsg(t);ancPlot();
+  if(C.state==='fail')setTimeout(()=>ancStop(true),50);
+}
+async function ancStart(){
+  if(ANC.state!=='idle')return;
+  const f=+$('#ancF').value;
+  if(!(f>=80&&f<=2500))return toast('فرکانس باید بین ۸۰ تا ۲۵۰۰ هرتز باشد');
+  ANC.state='capture';ANC.f0=f;$('#ancGo').setAttribute('aria-pressed',true);$('#ancGo').textContent='توقف ضدصدا';
+  ancMsg('ضبط ۲ ثانیه برای تخمین دقیق فرکانس…');
+  try{
+    ANC.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    const Ctx=window.AudioContext||window.webkitAudioContext,ctx=ANC.ctx=new Ctx({latencyHint:'interactive'});
+    if(ctx.state==='suspended')await ctx.resume();
+    if(!ctx.audioWorklet)throw new Error('no-worklet');
+    const url=URL.createObjectURL(new Blob([AC.WORKLET_SRC],{type:'text/javascript'}));
+    await ctx.audioWorklet.addModule(url);URL.revokeObjectURL(url);
+    const node=ANC.node=new AudioWorkletNode(ctx,'tone-canceller',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1]});
+    ctx.createMediaStreamSource(ANC.stream).connect(node);node.connect(ctx.destination);
+    ANC.C=new AC.ToneCanceller({send:m=>node.port.postMessage(m),maxAmp:ANC.vol,onState:ancRender});
+    node.port.onmessage=e=>{const m=e.data;if(m.R){if(ANC.state==='run')ANC.C.onBlock(m)}else if(m.cap)ancGotCapture(m.cap)};
+    ST.ancOn=true;
+    node.port.postMessage({f,on:false,capture:Math.round(ctx.sampleRate*2)});
+    ANC.timer=setTimeout(()=>{ancStop();toast('ضدصدا بعد از ۱۰ دقیقه خودکار قطع شد')},600000);
+  }catch(e){
+    ancStop(true);ancMsg(e&&e.message==='no-worklet'?'این مرورگر AudioWorklet ندارد؛ ضدصدا اجرا نمی‌شود.':'دسترسی به میکروفون یا صدا ممکن نشد.');
+  }
+}
+function ancGotCapture(buf){
+  if(ANC.state!=='capture')return;
+  const sr=ANC.ctx.sampleRate,r=AC.refineFrequency(buf,sr,ANC.f0,6);
+  let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
+  const A=4*Math.sqrt(r.p)/buf.length,ratio=(A*A/2)/(rms*rms+1e-18);
+  if(!(A>2e-4)||ratio<.03){ancStop(true);return ancMsg('تُنی نزدیک این فرکانس شنیده نشد (سهم تُن '+fa(ratio*100)+'٪ از صدا). گوشی را به منبع نزدیک‌تر کن یا فرکانس را از یک رویداد ثبت‌شده بردار.')}
+  ANC.f=r.f;$('#ancF').value=r.f.toFixed(2);ANC.state='run';
+  ANC.C.maxAmp=ANC.vol;ANC.C.start(ANC.f);
+}
+function ancStop(silent){
+  clearTimeout(ANC.timer);
+  try{if(ANC.C&&ANC.C.state!=='idle'&&ANC.C.state!=='fail')ANC.C.stop()}catch{}
+  const ctx=ANC.ctx,st=ANC.stream;ANC.ctx=ANC.stream=ANC.node=null;ANC.state='idle';
+  setTimeout(()=>{try{ctx&&ctx.close()}catch{};if(st)st.getTracks().forEach(t=>t.stop());ST.ancOn=false},400);
+  $('#ancGo').setAttribute('aria-pressed',false);$('#ancGo').textContent='شروع ضدصدا';
+  if(!silent)ancMsg('متوقف شد.');
+}
+$('#ancGo').onclick=()=>ANC.state==='idle'?ancStart():ancStop();
+$('#ancLast').onclick=()=>{const e=ST.events.find(x=>x.kind==='sound'&&x.data.peakF>=80&&x.data.peakF<=2500);if(!e)return toast('رویداد صوتی مناسبی ثبت نشده');$('#ancF').value=e.data.peakF;toast('فرکانس آخرین رویداد صوتی: '+fa(e.data.peakF)+' هرتز')};
+$('#ancVol').oninput=e=>{ANC.vol=+e.target.value/100;$('#ancVolV').textContent=fa(+e.target.value)+'٪';if(ANC.C)ANC.C.maxAmp=ANC.vol};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&ANC.state!=='idle')ancStop()});
+$('#silOn').onchange=e=>{ST.silOn=e.target.checked};
+$('#silThr').oninput=e=>{ST.silThr=+e.target.value;$('#silThrV').textContent=fa(ST.silThr)+' dB';if(ST.QD)ST.QD.thr=ST.silThr};
+$('#silDur').oninput=e=>{ST.silDur=+e.target.value;$('#silDurV').textContent=fa(ST.silDur)+' ثانیه';if(ST.QD)ST.QD.minDur=ST.silDur};
+
 $('#aStart').onclick=()=>ST.running?stop():start();
 $('#aThrM').oninput=e=>{ST.thrM=+e.target.value;$('#aThrMv').textContent=fa(ST.thrM)+' µT';if(ST.MD)ST.MD.thr=ST.thrM};
 $('#aThrS').oninput=e=>{ST.thrS=+e.target.value;$('#aThrSv').textContent=fa(ST.thrS)+' dB';if(ST.SD)ST.SD.thr=ST.thrS};
 $('#aDim').onclick=()=>{const on=!app.classList.contains('dim');app.classList.toggle('dim',on);$('#aDim').setAttribute('aria-pressed',on)};
 for(const[id,f]of[['tAll','all'],['tMag','mag'],['tSnd','snd']])$('#'+id).onclick=()=>{ST.filter=f;for(const[i]of[['tAll'],['tMag'],['tSnd']])$('#'+i).setAttribute('aria-pressed',i===id);render()};
 openBtn.onclick=()=>{app.classList.add('on');load();setSens()};
-$('#aClose').onclick=()=>app.classList.remove('on');
+$('#aClose').onclick=()=>{ancStop(true);app.classList.remove('on')};
 requestAnimationFrame(live);syncBtns();
 })();

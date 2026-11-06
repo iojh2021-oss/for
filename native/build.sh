@@ -6,7 +6,7 @@ ROOT=..
 
 rm -rf www android node_modules assets
 mkdir -p www assets
-for f in index.html manifest.json icon.svg pupil.js pupil-core.js anomaly.js anomaly-core.js; do
+for f in index.html manifest.json icon.svg pupil.js pupil-core.js anomaly.js anomaly-core.js vision.js vision-core.js; do
   cp "$ROOT/$f" www/
 done
 if [ -d "$ROOT/mp" ]; then cp -r "$ROOT/mp" www/mp; else echo "WARNING: پوشه‌ی mp (مدل چهره) پیدا نشد؛ اسکن مردمک کار نمی‌کند"; fi

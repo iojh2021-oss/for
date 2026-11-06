@@ -107,8 +107,18 @@ function onOri(e){
   else if(!ST.gotAbs&&e.absolute&&e.alpha!=null)feedHeading((360-e.alpha)%360);
 }
 function feedHeading(h){ST.live.H=h;if(ST.MD)ST.MD.heading(nowS(),h)}
-function startMag(){
-  const msg=[];
+function nativeSensors(){const C=window.Capacitor;return C&&C.isNativePlatform&&C.isNativePlatform()&&C.Plugins&&C.Plugins.NativeSensors}
+async function startMag(){
+  const NS=nativeSensors();
+  if(NS){
+    try{
+      const r=await NS.start();
+      if(r&&r.available){
+        ST.magH=await NS.addListener('mag',d=>{ST.live.B=Math.hypot(d.x,d.y,d.z);ST.MD.mag(nowS(),d.x,d.y,d.z)});
+        ST.rawOk=true;ST.MD.rawOk=true;ST.native=true;setSens();return;
+      }
+    }catch{}
+  }
   try{
     if(typeof Magnetometer==='undefined')throw new Error('none');
     const s=new Magnetometer({frequency:20,referenceFrame:'device'});
@@ -121,7 +131,7 @@ function startMag(){
 function setSens(){
   const m=[];
   m.push(ST.mic?'میکروفون: فعال':'میکروفون: غیرفعال یا اجازه داده نشد');
-  if(ST.rawOk)m.push('مغناطیس‌سنج: فعال (شدت میدان بر حسب µT)');
+  if(ST.rawOk)m.push(ST.native?'مغناطیس‌سنج بومی اندروید: فعال (µT)':'مغناطیس‌سنج: فعال (شدت میدان بر حسب µT)');
   else m.push('مغناطیس‌سنج خام در این مرورگر فعال نیست؛ فقط انحراف قطب‌نما ثبت می‌شود. در Chrome می‌توانی chrome://flags/#enable-generic-sensor-extra-classes را روشن کنی.');
   $('#aSens').textContent=m.join(' | ');
 }
@@ -151,7 +161,7 @@ async function start(){
   window.addEventListener('devicemotion',onMotion);
   window.addEventListener('deviceorientationabsolute',onOriAbs);
   window.addEventListener('deviceorientation',onOri);
-  startMag();await startMic();setSens();
+  await startMag();await startMic();setSens();
   try{if('wakeLock' in navigator)ST.wake=await navigator.wakeLock.request('screen')}catch{}
   syncBtns();
   toast('ثبت شروع شد؛ ۶ ثانیه اول فقط محیط را کالیبره می‌کند');
@@ -162,6 +172,7 @@ function stop(){
   if(ST.mic)ST.mic.getTracks().forEach(t=>t.stop());ST.mic=null;
   try{ST.micCtx&&ST.micCtx.close()}catch{}
   try{ST.mag&&ST.mag.stop()}catch{}ST.mag=null;
+  if(ST.magH){try{ST.magH.remove()}catch{}ST.magH=null;const NS=nativeSensors();if(NS)NS.stop().catch(()=>{});ST.native=false}
   window.removeEventListener('devicemotion',onMotion);
   window.removeEventListener('deviceorientationabsolute',onOriAbs);
   window.removeEventListener('deviceorientation',onOri);
@@ -236,7 +247,14 @@ function render(){
 async function load(){try{await DB.open();ST.events=(await DB.all()).sort((a,b)=>b.ts-a.ts);render()}catch{}}
 
 /* ---------- خروجی ---------- */
-function download(name,text,type){
+async function download(name,text,type){
+  const C=window.Capacitor;
+  if(C&&C.isNativePlatform&&C.isNativePlatform()&&C.Plugins&&C.Plugins.Filesystem&&C.Plugins.Share){
+    try{
+      const r=await C.Plugins.Filesystem.writeFile({path:name,data:text,directory:'CACHE',encoding:'utf8'});
+      await C.Plugins.Share.share({title:name,files:[r.uri]});return;
+    }catch{toast('ذخیره‌ی فایل ممکن نشد')}
+  }
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;
   document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
 }

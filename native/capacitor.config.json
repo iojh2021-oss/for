@@ -1,0 +1,8 @@
+{
+  "appId": "app.didehban",
+  "appName": "دیده‌بان",
+  "webDir": "www",
+  "backgroundColor": "#170f0e",
+  "server": { "androidScheme": "https" },
+  "android": { "allowMixedContent": false }
+}

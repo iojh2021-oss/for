@@ -6,7 +6,7 @@ ROOT=..
 
 rm -rf www android node_modules assets
 mkdir -p www assets
-for f in index.html manifest.json icon.svg pupil.js pupil-core.js anomaly.js anomaly-core.js vision.js vision-core.js; do
+for f in index.html manifest.json icon.svg pupil.js pupil-core.js anomaly.js anomaly-core.js vision.js vision-core.js mosquito.js mosquito-core.js; do
   cp "$ROOT/$f" www/
 done
 if [ -d "$ROOT/mp" ]; then cp -r "$ROOT/mp" www/mp; else echo "WARNING: پوشه‌ی mp (مدل چهره) پیدا نشد؛ اسکن مردمک کار نمی‌کند"; fi
@@ -47,7 +47,7 @@ PY
 # افزونه‌ی مغناطیس‌سنج و فعالیت اصلی
 JAVA=android/app/src/main/java/app/didehban
 mkdir -p "$JAVA"
-cp templates/NativeSensorsPlugin.java templates/MainActivity.java "$JAVA/"
+cp templates/*.java "$JAVA/"
 
 # آیکون (در صورت خطا همان آیکون پیش‌فرض می‌ماند)
 if command -v rsvg-convert >/dev/null 2>&1; then

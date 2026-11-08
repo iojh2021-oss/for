@@ -59,5 +59,6 @@ fi
 npx cap sync android
 cd android
 chmod +x gradlew
+for i in 1 2 3; do ./gradlew --version >/dev/null 2>&1 && break || { echo "gradle wrapper download retry $i"; sleep 10; }; done
 ./gradlew assembleDebug --no-daemon
 ls -lh app/build/outputs/apk/debug/
